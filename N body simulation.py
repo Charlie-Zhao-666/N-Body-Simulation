@@ -4,47 +4,108 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Slider
 import mplcursors
-from matplotlib.widgets import Slider
+import sys
+import copy
+import json
+import secrets
+
 
 # global var
 dt = 1
-tot_time = 10000
+tot_time = 1000
 G = 1
-N = 3
+N = 5
 
 # setting initial information
 
-p = 50      #position factor
-v = 0.1     #initial velocity range
+p = 50      # position factor
+v = 0.1     # initial velocity range
 test_result = []
 stars = []
-positions = [] 
-for i in range(N):      #build stars
+positions = []
+
+# seeds selecting
+print("select the seed that you want")
+print("1. random seed.\n2. import seed.\n3. Known seeds")
+
+select_seeds = 4
+while select_seeds not in (1, 2, 3):
+    select_seeds = int(input())
+
+    if select_seeds == 1:
+        seed = secrets.randbits(32)
+
+    elif select_seeds == 2:
+        seed = int(input("please type the seed:"))
+
+    elif select_seeds == 3:
+        print("which model do you want to run?")
+        print("1. \n")
+
+    else:
+        print("ERROR!")
+
+
+# build stars
+np.random.seed(seed)
+for i in range(N):
     star = {
         "mass": 1,
-        "pos": np.array([np.random.uniform(-p,p), np.random.uniform(-p,p), np.random.uniform(-p,p)], dtype=float),
-        "v": np.array([np.random.uniform(-v,v), np.random.uniform(-v,v), np.random.uniform(-v,v)], dtype=float)
+        "pos": np.random.uniform(-p, p, size=3),
+        "v": np.random.uniform(-v, v, size=3),
     }
     stars.append(star)
-    positions.append([star["pos"].copy()]) 
+    positions.append([star["pos"].copy()])
 
+initial_stars = copy.deepcopy(stars)
+
+
+print("chose time step")
+print("1. defult value/determined by seed.\n2. Customized value.")
+dtselection = 0
+while dtselection not in (1, 2):
+    dtselection = int(input())
+    if dtselection == 1:
+        pass
+    elif dtselection == 2:
+        dt = float(input())
+    else:
+        print("ERROR")
+
+print("chose total time")
+print("1. defult value/determined by seed.\n2. Customized value.")
+ttselection = 0
+while ttselection not in (1, 2):
+    ttselection = int(input())
+    if ttselection == 1:
+        pass
+    elif ttselection == 2:
+        tot_time = int(input())
+    else:
+        print("ERROR")
 
 
 # function
+
 def dist(s1, s2):
     return np.linalg.norm(s2["pos"] - s1["pos"])
+
 
 def dir_vector(s1, s2):
     return (s2["pos"] - s1["pos"]) / dist(s1, s2)
 
+
 def acc(s1, s2):
     return G * s2["mass"] / dist(s1, s2)**2 * dir_vector(s1, s2)
+
 
 def Ek(s1):
     return 0.5 * s1["mass"] * np.linalg.norm(s1["v"])**2
 
+
 def Ep(s1, s2):
     return - G * s1["mass"] * s2["mass"] / dist(s1, s2)
+
 
 def tot_E(s):
     sigma_Ep = 0
@@ -55,11 +116,13 @@ def tot_E(s):
             sigma_Ep += Ep(s[i], s[j])
     return sigma_Ek + sigma_Ep
 
+
 def Px(s):
     sigma_Px = 0
     for i in range(len(s)):
         sigma_Px += s[i]["mass"] * s[i]["v"][0]
     return sigma_Px
+
 
 def Py(s):
     sigma_Py = 0
@@ -74,18 +137,22 @@ def Pz(s):
         sigma_Pz += s[i]["mass"] * s[i]["v"][2]
     return sigma_Pz
 
+
 def tot_P(s):
     a = np.array([Px(s), Py(s), Pz(s)])
     return a
 
+
 def tot_P_mag(s):
     return np.linalg.norm(tot_P(s))
+
 
 def L(s):
     sigma_L = np.zeros(3)
     for i in range(len(s)):
         sigma_L += np.cross(s[i]["pos"], s[i]["mass"] * s[i]["v"])
     return sigma_L
+
 
 def CoM_pos(s):
     tot_m = 0
@@ -95,6 +162,7 @@ def CoM_pos(s):
         mr += s[i]["mass"] * s[i]["pos"]
     return mr/tot_m
 
+
 def CoM_v(s):
     tot_m = 0
     mv = np.zeros(3)
@@ -102,6 +170,7 @@ def CoM_v(s):
         tot_m += s[i]["mass"]
         mv += s[i]["mass"] * s[i]["v"]
     return mv/tot_m
+
 
 def test(s):
     return {
@@ -111,7 +180,15 @@ def test(s):
         "com_pos": CoM_pos(s),
         "com_v": CoM_v(s)
     }
-    
+
+
+def RMSE(data):
+    a = 0
+    for i in range(1, len(data)):
+        a += (data[0] - data[i]) ** 2
+    mse = a / (len(data) - 1)
+    return np.sqrt(mse)
+
 
 # leapfrog
 def leapfrog(stars):
@@ -120,43 +197,51 @@ def leapfrog(stars):
         for j in range(i+1, N):
             a = acc(stars[i], stars[j])
             accs[i] += a
-            accs[j] -= a * stars[i]["mass"] / stars[j]["mass"] 
+            accs[j] -= a * stars[i]["mass"] / stars[j]["mass"]
 
     # half step velocity
     for i in range(N):
         stars[i]["v"] += 0.5 * dt * accs[i]
-    
+
     # full step position
     for i in range(N):
         stars[i]["pos"] += stars[i]["v"] * dt
-    
+
     # new acceleartion
     accs = [np.zeros(3) for _ in range(N)]
     for i in range(N):
         for j in range(i+1, N):
             a = acc(stars[i], stars[j])
             accs[i] += a
-            accs[j] -= a * stars[i]["mass"] / stars[j]["mass"]  
-    
+            accs[j] -= a * stars[i]["mass"] / stars[j]["mass"]
+
     # another half step velocity
     for i in range(N):
         stars[i]["v"] += 0.5 * dt * accs[i]
-   
+
     # record
     for i in range(N):
         positions[i].append(stars[i]["pos"].copy())
 
 
-
 # main loop
-print(stars)
 start_time = time.time()
 test_time = [0]
 test_result.append(test(stars))
+
+energy_eigenvalue = 0
+sigma_Ep = 0
+sigma_Ek = 0
+for i in range(N):
+    sigma_Ek += Ek(stars[i])
+    for j in range(i+1, N):
+        sigma_Ep += Ep(stars[i], stars[j])
+energy_eigenvalue = sigma_Ek - sigma_Ep
+
 for step in range(tot_time):
     leapfrog(stars)
     if (step + 1) % 10 == 0:
-        print(step/tot_time,"/",1)
+        print(step/tot_time, "/", 1)
         test_result.append(test(stars))
         test_time += [(step + 1) * dt]
     if step/tot_time == 0.01:
@@ -166,13 +251,66 @@ for step in range(tot_time):
         pridict_time = time.time()
         print(f"remaining {(pridict_time-start_time)*19} s")
 end_time = time.time()
-print(f"simulation cost {end_time - start_time:.2f} s")
-print(stars)
+print("report: simulation done!")
+print(f"simulation cost {end_time - start_time:.2f} s\n")
 
+# error analysis
 
+energy_result = np.array([
+    result["energy"]
+    for result in test_result
+])
 
+energy_rmse = float(RMSE(energy_result))
 
-# ==================== 动画窗口 ====================
+rmse_results = {
+    "energy": energy_rmse
+}
+
+normalized_energy_RMSE = energy_rmse / energy_eigenvalue
+print("\n=============== RMSE ===============")
+quantity_info = [
+    ("momentum", "Total Momentum"),
+    ("angular_momentum", "Total Angular Momentum"),
+    ("com_v", "Center Of Mass Velocity"),
+]
+
+for key, title in quantity_info:
+    values = np.array([
+        result[key]
+        for result in test_result
+    ])
+
+    component_rmse = RMSE(values)
+
+    magnitudes = np.linalg.norm(values, axis=1)
+    magnitude_rmse = RMSE(magnitudes)
+
+    rmse_results[key] = {
+        "x": float(component_rmse[0]),
+        "y": float(component_rmse[1]),
+        "z": float(component_rmse[2]),
+        "magnitude": float(magnitude_rmse),
+    }
+
+    print(f"\n{title}：")
+    print(f"  x component：{component_rmse[0]:.6e}")
+    print(f"  y component：{component_rmse[1]:.6e}")
+    print(f"  z component：{component_rmse[2]:.6e}")
+    print(f"  Mag：  {magnitude_rmse:.6e}\n")
+
+print(f"Total Energy：{energy_rmse:.6e}")
+print(f"Normalized Energy RMSE:{normalized_energy_RMSE:.6e}")
+
+print("====================================")
+
+print(f"seed: {seed}, N = {N}, dt = {dt}, step = {tot_time}\n")
+
+# animation & plot
+# ============================================================================================================================================
+# ============================================================================================================================================
+# ============================================================================================================================================
+# ============================================================================================================================================
 
 fig = plt.figure(figsize=(10, 8))
 fig.subplots_adjust(bottom=0.18)
@@ -369,7 +507,9 @@ energy_ax.plot(
     color="black",
 )
 
-energy_ax.set_title("Total energy")
+energy_rmse_final = RMSE(energies)
+energy_title = f"Total energy (RMSE: {energy_rmse_final:.6e}, normalized: {energy_rmse_final / energy_eigenvalue:.6e})"
+energy_ax.set_title(energy_title)
 energy_ax.set_xlabel("Time")
 energy_ax.set_ylabel("E")
 energy_ax.grid(True, alpha=0.3)
@@ -399,8 +539,11 @@ for row, (key, title, symbol) in enumerate(vector_info, start=1):
             values[:, component],
             color=component_colors[component],
         )
-
-        axis.set_title(f"{title}: {name}")
+        
+        # 计算该分量的RMSE
+        component_rmse = RMSE(values[:, component])
+        component_title = f"{title}: {name}\nRMSE: {component_rmse:.6e}"
+        axis.set_title(component_title, fontsize=9)
         axis.set_xlabel("Time")
         axis.set_ylabel(f"{symbol}_{name}")
         axis.grid(True, alpha=0.3)
@@ -418,8 +561,10 @@ for row, (key, title, symbol) in enumerate(vector_info, start=1):
         magnitudes,
         color="tab:purple",
     )
-
-    magnitude_ax.set_title(f"{title}: magnitude")
+    
+    magnitude_rmse = RMSE(magnitudes)
+    magnitude_title = f"{title}: magnitude\nRMSE: {magnitude_rmse:.6e}"
+    magnitude_ax.set_title(magnitude_title, fontsize=9)
     magnitude_ax.set_xlabel("Time")
     magnitude_ax.set_ylabel(f"|{symbol}|")
     magnitude_ax.grid(True, alpha=0.3)
@@ -451,6 +596,27 @@ for axis in fig_test.axes:
         "y": np.asarray(line.get_ydata()),
         "label": label,
     }
+
+# ==================== 添加RMSE汇总信息 ====================
+
+# 计算所有RMSE值
+# all_rmse_info = f"RMSE Summary:\nEnergy: {energy_rmse_final:.6e}"
+
+# for key, title, symbol in vector_info:
+#     values = np.array([result[key] for result in test_result])
+#     magnitudes = np.linalg.norm(values, axis=1)
+#     magnitude_rmse = RMSE(magnitudes)
+#     all_rmse_info += f"\n{title} (mag): {magnitude_rmse:.6e}"
+
+# # 在图表右上角添加RMSE信息框
+# fig_test.text(
+#     0.98, 0.98, all_rmse_info,
+#     transform=fig_test.transFigure,
+#     fontsize=9,
+#     verticalalignment='top',
+#     horizontalalignment='right',
+#     bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8, pad=0.8)
+# )
 
 hover_state = {"selection": None}
 
