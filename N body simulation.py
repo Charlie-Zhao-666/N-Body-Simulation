@@ -39,8 +39,88 @@ while select_seeds not in (1, 2, 3):
         seed = int(input("please type the seed:"))
 
     elif select_seeds == 3:
-        print("which model do you want to run?")
-        print("1. \n")
+        # Known stable periodic solutions (G = 1, equal masses m = 1).
+        # Each option sets N, dt, tot_time and loads the exact initial
+        # conditions directly, so the random builder below is skipped.
+        # All solutions have zero total momentum and their center of mass
+        # at the origin.
+        print("which stable solution do you want to run?")
+        print("1. Figure-8 three-body choreography (Chenciner-Montgomery)")
+        print("2. Lagrange equilateral triangle (circular three-body orbit)")
+        print("3. Circular two-body orbit")
+        print("4. Elliptic two-body orbit (e = 0.5)")
+
+        solution = 0
+        while solution not in (1, 2, 3, 4):
+            solution = int(input())
+
+            if solution == 1:
+                # period T approx 6.3259
+                N = 3
+                dt = 0.001
+                tot_time = 6500
+                seed = 1
+                r1 = np.array([0.97000436, -0.24308753, 0.0])
+                v3 = np.array([0.93240737, 0.86473146, 0.0])
+                solution_stars = [
+                    {"mass": 1, "pos": r1.copy(), "v": -0.5 * v3},
+                    {"mass": 1, "pos": -r1, "v": -0.5 * v3},
+                    {"mass": 1, "pos": np.zeros(3), "v": v3.copy()},
+                ]
+
+            elif solution == 2:
+                # angular frequency omega = sqrt(3), period T approx 3.6276
+                N = 3
+                dt = 0.001
+                tot_time = 3650
+                seed = 2
+                rc = 1.0 / np.sqrt(3.0)
+                solution_stars = []
+                for k in range(3):
+                    theta = 2.0 * np.pi * k / 3.0
+                    solution_stars.append({
+                        "mass": 1,
+                        "pos": rc * np.array([np.cos(theta), np.sin(theta), 0.0]),
+                        "v": np.array([-np.sin(theta), np.cos(theta), 0.0]),
+                    })
+
+            elif solution == 3:
+                # separation 1, period T approx 4.4429
+                N = 2
+                dt = 0.001
+                tot_time = 4500
+                seed = 3
+                v_circ = np.sqrt(2.0) / 2.0
+                solution_stars = [
+                    {"mass": 1, "pos": np.array([0.5, 0.0, 0.0]),
+                     "v": np.array([0.0, v_circ, 0.0])},
+                    {"mass": 1, "pos": np.array([-0.5, 0.0, 0.0]),
+                     "v": np.array([0.0, -v_circ, 0.0])},
+                ]
+
+            elif solution == 4:
+                # semi-major axis 1, apocenter start, period T approx 4.4429
+                N = 2
+                dt = 0.001
+                tot_time = 4500
+                seed = 4
+                v_ap = np.sqrt(1.0 / 6.0)
+                solution_stars = [
+                    {"mass": 1, "pos": np.array([0.75, 0.0, 0.0]),
+                     "v": np.array([0.0, v_ap, 0.0])},
+                    {"mass": 1, "pos": np.array([-0.75, 0.0, 0.0]),
+                     "v": np.array([0.0, -v_ap, 0.0])},
+                ]
+
+            else:
+                print("ERROR!")
+
+        for star in solution_stars:
+            stars.append(star)
+            positions.append([star["pos"].copy()])
+
+        print(f"loaded stable solution {solution}: N = {N}, "
+              f"suggested dt = {dt}, suggested steps = {tot_time}")
 
     else:
         print("ERROR!")
@@ -48,14 +128,16 @@ while select_seeds not in (1, 2, 3):
 
 # build stars
 np.random.seed(seed)
-for i in range(N):
-    star = {
-        "mass": 1,
-        "pos": np.random.uniform(-p, p, size=3),
-        "v": np.random.uniform(-v, v, size=3),
-    }
-    stars.append(star)
-    positions.append([star["pos"].copy()])
+# option 3 loads exact stable solutions above; skip the random builder for it
+if select_seeds != 3:
+    for i in range(N):
+        star = {
+            "mass": 1,
+            "pos": np.random.uniform(-p, p, size=3),
+            "v": np.random.uniform(-v, v, size=3),
+        }
+        stars.append(star)
+        positions.append([star["pos"].copy()])
 
 initial_stars = copy.deepcopy(stars)
 
@@ -539,7 +621,7 @@ for row, (key, title, symbol) in enumerate(vector_info, start=1):
             values[:, component],
             color=component_colors[component],
         )
-        
+
         # 计算该分量的RMSE
         component_rmse = RMSE(values[:, component])
         component_title = f"{title}: {name}\nRMSE: {component_rmse:.6e}"
@@ -561,7 +643,7 @@ for row, (key, title, symbol) in enumerate(vector_info, start=1):
         magnitudes,
         color="tab:purple",
     )
-    
+
     magnitude_rmse = RMSE(magnitudes)
     magnitude_title = f"{title}: magnitude\nRMSE: {magnitude_rmse:.6e}"
     magnitude_ax.set_title(magnitude_title, fontsize=9)
