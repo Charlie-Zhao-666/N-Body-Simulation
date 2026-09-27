@@ -44,7 +44,7 @@ Sister project: [Neutron-Star-Modeling](https://github.com/Charlie-Zhao-666/Neut
 | `N body simulation.py` | Main simulation, latest version. Improvement over the previous upload: the stable-solution menu grew from 4 to 13 entries - nine Suvakov-Dmitrasinovic periodic three-body orbits were added, all stable-solution initial conditions moved into the new data module `stable_orbits.py` (the menu is generated from the data), and the animation view is now sized automatically for stable solutions. Earlier history: the first upload introduced leapfrog integration with RMSE error analysis; the second added random / imported seed control and interactive parameters; the third turned the placeholder "Known seeds" option into four exact stable periodic solutions. |
 | `stable_orbits.py` | Data module with the initial conditions of the known stable / periodic solutions, imported by the main program (must sit in the same folder). Each entry carries N, a recommended dt and step count (exactly one period for the three-body choreographies), zero-momentum initial positions and velocities, the period, a literature source, and an optional warning note. |
 | `time_step_tester.py` | Time-step scan tool, kept as a separate column (not an update of the main program). Runs the same initial conditions through a list of time steps (total physical time held fixed) and plots energy RMSE and normalized energy RMSE versus dt on log-log scales. Difference from the earlier local draft: the particle state and all record lists are now reset before each dt run, so every time step starts from identical initial conditions and results are not mixed across runs. Note: its seed menu still has the old placeholder option 3 - use option 1 or 2. |
-| `Galaxy simulation.py` | Galaxy demo, version 1 of a new galaxy-simulation track, kept as a separate file parallel to the two programs above (not an update of either). A central AGN (mass 1e6) anchors a vertically flared disk of 99 stars (radius 200-3000, sigma_z = 0.05 r; the first 5% are massive stars of 100-1000, the rest have mass 1) on initially circular orbits with small velocity noise, plus one outer perturber (mass 1e5) at 3x the disk radius. Same pairwise leapfrog scheme as the main program (dt = 3, 50000 steps), but rendered with vispy - a turntable camera locked on the center and color/size-coded populations - instead of matplotlib, and without the conservation diagnostics: it is a visual demo. Trail rendering exists in the code but is commented out. Requires `vispy`. |
+| `Galaxies collision simulation.py` | Galaxy-collision demo, version 1 of the galaxy-collision track, kept as a separate file parallel to the programs above (not an update of any of them). Two identical galaxies - each a central AGN of mass 5.5e6 plus a 24-star disk (star masses 1-10, orbital radii 2-25, initially circular Keplerian speeds around its own center) - start 60 length units apart and drift toward each other with small transverse kicks, the disk stars sharing 1.2x their center's drift velocity. Same pairwise leapfrog scheme as the main program (G = 1e-11, dt = 100, 1000 steps), animated in 3D with matplotlib (gray trails and blue points for disk stars, red/orange curves for the two AGNs, fixed +/-60 view box). No conservation diagnostics - it is a visual demo. Needs only numpy and matplotlib. |
 | `.gitignore` | Standard Python ignore rules. |
 | `README.md` | This file. |
 
@@ -83,9 +83,9 @@ Sister project: [Neutron-Star-Modeling](https://github.com/Charlie-Zhao-666/Neut
   motivates the planned adaptive time stepping.
 - 3D orbit animation with a playback slider and automatic view sizing
   for stable solutions; diagnostic plots with hover readout.
-- Galaxy demo, first version: an AGN-centered 100-body flared disk
-  plus an outer perturber, integrated with the same leapfrog scheme
-  and rendered interactively with vispy.
+- Galaxy-collision demo, first version: two AGN-centered 24-star disks
+  set on a collision course, integrated with the same leapfrog scheme
+  and animated in 3D with matplotlib.
 
 ## Planned / future work
 
@@ -101,10 +101,9 @@ Sister project: [Neutron-Star-Modeling](https://github.com/Charlie-Zhao-666/Neut
 - More benchmark and convergence studies using the periodic reference
   solutions.
 - GPU acceleration (an early CuPy prototype exists locally).
-- Galaxy track: enable the commented-out trails in
-  `Galaxy simulation.py`, add conservation diagnostics to the galaxy
-  runs, and build a galaxy-collision demo on the same integrator (a
-  local draft exists).
+- Galaxy track: conservation diagnostics for the galaxy-collision runs,
+  more realistic collision setups (inclined / parabolic encounters,
+  tidal tails), and a single-galaxy vispy demo (a local draft exists).
 - Result images / animations and a written project report.
 
 ## How to run
@@ -118,15 +117,16 @@ Follow the on-screen menus to choose the seed mode, the time step and
 the number of steps. Keep `stable_orbits.py` in the same folder as the
 main program - the "Known seeds" menu imports it. (The current version
 imports `mplcursors`; the hover readout itself is implemented with
-matplotlib events.) `Galaxy simulation.py` additionally needs `vispy`
-(`pip install vispy`) and an OpenGL-capable backend.
+matplotlib events.) `Galaxies collision simulation.py` needs only
+numpy and matplotlib.
 
 ## Units and conventions
 
 The simulation uses dimensionless computational units with G = 1 and
 equal masses m = 1. The parameter called "total time" in the current
 interface is the number of integration steps, so the physical simulated
-time is steps x dt.
+time is steps x dt. (`Galaxies collision simulation.py` uses G = 1e-11
+and unequal masses - see its header.)
 
 ## Known issues and notes
 
