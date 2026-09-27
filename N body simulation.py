@@ -40,87 +40,45 @@ while select_seeds not in (1, 2, 3):
 
     elif select_seeds == 3:
         # Known stable periodic solutions (G = 1, equal masses m = 1).
-        # Each option sets N, dt, tot_time and loads the exact initial
-        # conditions directly, so the random builder below is skipped.
-        # All solutions have zero total momentum and their center of mass
-        # at the origin.
+        # The orbit data lives in stable_orbits.py, imported locally here
+        # so this block stays self-contained. Each option sets N, dt,
+        # tot_time and loads the exact initial conditions directly, so the
+        # random builder below is skipped. All solutions have zero total
+        # momentum and their center of mass at the origin.
+        from stable_orbits import STABLE_ORBITS
+
         print("which stable solution do you want to run?")
-        print("1. Figure-8 three-body choreography (Chenciner-Montgomery)")
-        print("2. Lagrange equilateral triangle (circular three-body orbit)")
-        print("3. Circular two-body orbit")
-        print("4. Elliptic two-body orbit (e = 0.5)")
+        for i, orbit in enumerate(STABLE_ORBITS, start=1):
+            print(f"{i}. {orbit['name']}")
 
         solution = 0
-        while solution not in (1, 2, 3, 4):
+        while solution not in range(1, len(STABLE_ORBITS) + 1):
             solution = int(input())
 
-            if solution == 1:
-                # period T approx 6.3259
-                N = 3
-                dt = 0.001
-                tot_time = 6500
-                seed = 1
-                r1 = np.array([0.97000436, -0.24308753, 0.0])
-                v3 = np.array([0.93240737, 0.86473146, 0.0])
-                solution_stars = [
-                    {"mass": 1, "pos": r1.copy(), "v": -0.5 * v3},
-                    {"mass": 1, "pos": -r1, "v": -0.5 * v3},
-                    {"mass": 1, "pos": np.zeros(3), "v": v3.copy()},
-                ]
-
-            elif solution == 2:
-                # angular frequency omega = sqrt(3), period T approx 3.6276
-                N = 3
-                dt = 0.001
-                tot_time = 3650
-                seed = 2
-                rc = 1.0 / np.sqrt(3.0)
-                solution_stars = []
-                for k in range(3):
-                    theta = 2.0 * np.pi * k / 3.0
-                    solution_stars.append({
-                        "mass": 1,
-                        "pos": rc * np.array([np.cos(theta), np.sin(theta), 0.0]),
-                        "v": np.array([-np.sin(theta), np.cos(theta), 0.0]),
-                    })
-
-            elif solution == 3:
-                # separation 1, period T approx 4.4429
-                N = 2
-                dt = 0.001
-                tot_time = 4500
-                seed = 3
-                v_circ = np.sqrt(2.0) / 2.0
-                solution_stars = [
-                    {"mass": 1, "pos": np.array([0.5, 0.0, 0.0]),
-                     "v": np.array([0.0, v_circ, 0.0])},
-                    {"mass": 1, "pos": np.array([-0.5, 0.0, 0.0]),
-                     "v": np.array([0.0, -v_circ, 0.0])},
-                ]
-
-            elif solution == 4:
-                # semi-major axis 1, apocenter start, period T approx 4.4429
-                N = 2
-                dt = 0.001
-                tot_time = 4500
-                seed = 4
-                v_ap = np.sqrt(1.0 / 6.0)
-                solution_stars = [
-                    {"mass": 1, "pos": np.array([0.75, 0.0, 0.0]),
-                     "v": np.array([0.0, v_ap, 0.0])},
-                    {"mass": 1, "pos": np.array([-0.75, 0.0, 0.0]),
-                     "v": np.array([0.0, -v_ap, 0.0])},
-                ]
-
-            else:
+            if solution not in range(1, len(STABLE_ORBITS) + 1):
                 print("ERROR!")
+
+        orbit = STABLE_ORBITS[solution - 1]
+        N = orbit["N"]
+        dt = orbit["dt"]
+        tot_time = orbit["tot_time"]
+        seed = orbit["seed"]
+        solution_stars = [
+            {"mass": 1,
+             "pos": np.array(pos, dtype=float),
+             "v": np.array(vel, dtype=float)}
+            for pos, vel in zip(orbit["positions"], orbit["velocities"])
+        ]
 
         for star in solution_stars:
             stars.append(star)
             positions.append([star["pos"].copy()])
 
-        print(f"loaded stable solution {solution}: N = {N}, "
+        print(f"loaded stable solution {solution}: {orbit['name']}")
+        print(f"N = {N}, "
               f"suggested dt = {dt}, suggested steps = {tot_time}")
+        if orbit.get("note"):
+            print(f"note: {orbit['note']}")
 
     else:
         print("ERROR!")
@@ -375,13 +333,13 @@ for key, title in quantity_info:
         "magnitude": float(magnitude_rmse),
     }
 
-    print(f"\n{title}：")
-    print(f"  x component：{component_rmse[0]:.6e}")
-    print(f"  y component：{component_rmse[1]:.6e}")
-    print(f"  z component：{component_rmse[2]:.6e}")
-    print(f"  Mag：  {magnitude_rmse:.6e}\n")
+    print(f"\n{title}\uFF1A")
+    print(f"  x component\uFF1A{component_rmse[0]:.6e}")
+    print(f"  y component\uFF1A{component_rmse[1]:.6e}")
+    print(f"  z component\uFF1A{component_rmse[2]:.6e}")
+    print(f"  Mag\uFF1A  {magnitude_rmse:.6e}\n")
 
-print(f"Total Energy：{energy_rmse:.6e}")
+print(f"Total Energy\uFF1A{energy_rmse:.6e}")
 print(f"Normalized Energy RMSE:{normalized_energy_RMSE:.6e}")
 
 print("====================================")
@@ -437,15 +395,24 @@ ax.set_xlim(-b, b)
 ax.set_ylim(-b, b)
 ax.set_zlim(-b, b)
 
-# positions 的结构是：
-# positions[恒星编号][步数][坐标分量]
-# 提前转成数组，避免每次刷新都重新转换
+# positions \u7684\u7ed3\u6784\u662f\uFF1A
+# positions[\u6052\u661f\u7f16\u53f7][\u6b65\u6570][\u5750\u6807\u5206\u91cf]
+# \u63d0\u524d\u8f6c\u6210\u6570\u7ec4\uff0c\u907f\u514d\u6bcf\u6b21\u5237\u65b0\u90fd\u91cd\u65b0\u8f6c\u6362
 trajectories = np.array(positions)
 
-# 包含初始状态，所以最后一步是记录数量减 1
+# for the known stable solutions the orbit scale is ~1 instead of p, so the
+# view is resized from the actual trajectory extent, following the same
+# factor-2 rule as b = 2 * p above
+if select_seeds == 3:
+    b = 2 * np.max(np.abs(trajectories))
+    ax.set_xlim(-b, b)
+    ax.set_ylim(-b, b)
+    ax.set_zlim(-b, b)
+
+# \u5305\u542b\u521d\u59cb\u72b6\u6001\uff0c\u6240\u4ee5\u6700\u540e\u4e00\u6b65\u662f\u8bb0\u5f55\u6570\u91cf\u51cf 1
 last_step = trajectories.shape[1] - 1
 
-# 当前播放状态
+# \u5f53\u524d\u64ad\u653e\u72b6\u6001
 playback = {
     "step": 0,
     "dragging": False,
@@ -453,11 +420,11 @@ playback = {
 
 
 def update(step):
-    """显示第 step 步；step=0 表示初始状态。"""
+    """\u663e\u793a\u7b2c step \u6b65\uff1bstep=0 \u8868\u793a\u521d\u59cb\u72b6\u6001\u3002"""
     step = int(step)
 
     for i in range(N):
-        # 包含初始位置和当前步的位置
+        # \u5305\u542b\u521d\u59cb\u4f4d\u7f6e\u548c\u5f53\u524d\u6b65\u7684\u4f4d\u7f6e
         traj = trajectories[i, :step + 1]
 
         lines[i].set_data(traj[:, 0], traj[:, 1])
@@ -477,24 +444,24 @@ def update(step):
     return lines + points + [time_text]
 
 
-# ==================== 可拖动进度条 ====================
+# ==================== \u53ef\u62d6\u52a8\u8fdb\u5ea6\u6761 ====================
 
 slider_ax = fig.add_axes([0.20, 0.07, 0.60, 0.03])
 
 
 def on_press(event):
-    # 在进度条上按下鼠标左键时，暂停自动推进
+    # \u5728\u8fdb\u5ea6\u6761\u4e0a\u6309\u4e0b\u9f20\u6807\u5de6\u952e\u65f6\uff0c\u6682\u505c\u81ea\u52a8\u63a8\u8fdb
     if event.inaxes == slider_ax and event.button == 1:
         playback["dragging"] = True
 
 
 def on_release(event):
-    # 松开鼠标左键后，恢复自动推进
+    # \u677e\u5f00\u9f20\u6807\u5de6\u952e\u540e\uff0c\u6062\u590d\u81ea\u52a8\u63a8\u8fdb
     if event.button == 1:
         playback["dragging"] = False
 
 
-# 先注册鼠标事件，再创建 Slider
+# \u5148\u6ce8\u518c\u9f20\u6807\u4e8b\u4ef6\uff0c\u518d\u521b\u5efa Slider
 fig.canvas.mpl_connect("button_press_event", on_press)
 fig.canvas.mpl_connect("button_release_event", on_release)
 
@@ -510,7 +477,7 @@ time_slider = Slider(
 
 
 def on_slider_change(value):
-    """手动拖动和自动播放，都通过这里更新画面。"""
+    """\u624b\u52a8\u62d6\u52a8\u548c\u81ea\u52a8\u64ad\u653e\uff0c\u90fd\u901a\u8fc7\u8fd9\u91cc\u66f4\u65b0\u753b\u9762\u3002"""
     playback["step"] = int(value)
     update(playback["step"])
     fig.canvas.draw_idle()
@@ -519,10 +486,10 @@ def on_slider_change(value):
 time_slider.on_changed(on_slider_change)
 
 
-# ==================== 自动播放 ====================
+# ==================== \u81ea\u52a8\u64ad\u653e ====================
 
 def init_animation():
-    # 初始化时显示当前进度，不自动向前跳一步
+    # \u521d\u59cb\u5316\u65f6\u663e\u793a\u5f53\u524d\u8fdb\u5ea6\uff0c\u4e0d\u81ea\u52a8\u5411\u524d\u8df3\u4e00\u6b65
     return update(playback["step"])
 
 
@@ -532,11 +499,11 @@ def animate(_):
 
     next_step = playback["step"] + 1
 
-    # 到达最后一帧后，循环播放
+    # \u5230\u8fbe\u6700\u540e\u4e00\u5e27\u540e\uff0c\u5faa\u73af\u64ad\u653e
     if next_step > last_step:
         next_step = 0
 
-    # set_val 会触发 on_slider_change
+    # set_val \u4f1a\u89e6\u53d1 on_slider_change
     time_slider.set_val(next_step)
 
     return lines + points + [time_text]
@@ -552,7 +519,7 @@ ani = FuncAnimation(
 )
 
 
-# ==================== 物理量验证图 ====================
+# ==================== \u7269\u7406\u91cf\u9a8c\u8bc1\u56fe ====================
 
 times = np.asarray(test_time)
 
@@ -561,8 +528,8 @@ energies = np.array([
     for result in test_result
 ])
 
-# 每种向量物理量的数据形状都是：
-# (记录时刻数量, 3)
+# \u6bcf\u79cd\u5411\u91cf\u7269\u7406\u91cf\u7684\u6570\u636e\u5f62\u72b6\u90fd\u662f\uFF1A
+# (\u8bb0\u5f55\u65f6\u523b\u6570\u91cf, 3)
 vector_info = [
     ("momentum", "Total momentum", "P"),
     ("angular_momentum", "Total angular momentum", "L"),
@@ -574,12 +541,12 @@ fig_test = plt.figure(
     constrained_layout=True,
 )
 
-# 共四行、四列
-# 第一行：总能量，占整行
-# 后三行：每行一个向量物理量，分别画 x、y、z、模长
+# \u5171\u56db\u884c\u3001\u56db\u5217
+# \u7b2c\u4e00\u884c\uff1a\u603b\u80fd\u91cf\uff0c\u5360\u6574\u884c
+# \u540e\u4e09\u884c\uff1a\u6bcf\u884c\u4e00\u4e2a\u5411\u91cf\u7269\u7406\u91cf\uff0c\u5206\u522b\u753b x\u3001y\u3001z\u3001\u6a21\u957f
 grid = fig_test.add_gridspec(4, 4)
 
-# -------------------- 总能量 --------------------
+# -------------------- \u603b\u80fd\u91cf --------------------
 
 energy_ax = fig_test.add_subplot(grid[0, :])
 
@@ -596,7 +563,7 @@ energy_ax.set_xlabel("Time")
 energy_ax.set_ylabel("E")
 energy_ax.grid(True, alpha=0.3)
 
-# -------------------- 向量物理量 --------------------
+# -------------------- \u5411\u91cf\u7269\u7406\u91cf --------------------
 
 component_names = ["x", "y", "z"]
 component_colors = ["tab:red", "tab:green", "tab:blue"]
@@ -607,7 +574,7 @@ for row, (key, title, symbol) in enumerate(vector_info, start=1):
         for result in test_result
     ])
 
-    # x、y、z 分量分别画在三个独立子图中
+    # x\u3001y\u3001z \u5206\u91cf\u5206\u522b\u753b\u5728\u4e09\u4e2a\u72ec\u7acb\u5b50\u56fe\u4e2d
     for component in range(3):
         axis = fig_test.add_subplot(
             grid[row, component],
@@ -621,8 +588,8 @@ for row, (key, title, symbol) in enumerate(vector_info, start=1):
             values[:, component],
             color=component_colors[component],
         )
-
-        # 计算该分量的RMSE
+        
+        # \u8ba1\u7b97\u8be5\u5206\u91cf\u7684RMSE
         component_rmse = RMSE(values[:, component])
         component_title = f"{title}: {name}\nRMSE: {component_rmse:.6e}"
         axis.set_title(component_title, fontsize=9)
@@ -630,7 +597,7 @@ for row, (key, title, symbol) in enumerate(vector_info, start=1):
         axis.set_ylabel(f"{symbol}_{name}")
         axis.grid(True, alpha=0.3)
 
-    # axis=1：对每个时刻的三个分量计算模长
+    # axis=1\uFF1A\u5bf9\u6bcf\u4e2a\u65f6\u523b\u7684\u4e09\u4e2a\u5206\u91cf\u8ba1\u7b97\u6a21\u957f
     magnitudes = np.linalg.norm(values, axis=1)
 
     magnitude_ax = fig_test.add_subplot(
@@ -643,7 +610,7 @@ for row, (key, title, symbol) in enumerate(vector_info, start=1):
         magnitudes,
         color="tab:purple",
     )
-
+    
     magnitude_rmse = RMSE(magnitudes)
     magnitude_title = f"{title}: magnitude\nRMSE: {magnitude_rmse:.6e}"
     magnitude_ax.set_title(magnitude_title, fontsize=9)
@@ -651,7 +618,7 @@ for row, (key, title, symbol) in enumerate(vector_info, start=1):
     magnitude_ax.set_ylabel(f"|{symbol}|")
     magnitude_ax.grid(True, alpha=0.3)
 
-# 每个子图准备一个数值提示框
+# \u6bcf\u4e2a\u5b50\u56fe\u51c6\u5907\u4e00\u4e2a\u6570\u503c\u63d0\u793a\u6846
 hover_items = {}
 
 for axis in fig_test.axes:
@@ -679,9 +646,9 @@ for axis in fig_test.axes:
         "label": label,
     }
 
-# ==================== 添加RMSE汇总信息 ====================
+# ==================== \u6dfb\u52a0RMSE\u6c47\u603b\u4fe1\u606f ====================
 
-# 计算所有RMSE值
+# \u8ba1\u7b97\u6240\u6709RMSE\u503c
 # all_rmse_info = f"RMSE Summary:\nEnergy: {energy_rmse_final:.6e}"
 
 # for key, title, symbol in vector_info:
@@ -690,7 +657,7 @@ for axis in fig_test.axes:
 #     magnitude_rmse = RMSE(magnitudes)
 #     all_rmse_info += f"\n{title} (mag): {magnitude_rmse:.6e}"
 
-# # 在图表右上角添加RMSE信息框
+# # \u5728\u56fe\u8868\u53f3\u4e0a\u89d2\u6dfb\u52a0RMSE\u4fe1\u606f\u6846
 # fig_test.text(
 #     0.98, 0.98, all_rmse_info,
 #     transform=fig_test.transFigure,
@@ -715,7 +682,7 @@ def show_nearest_value(event):
     if len(xs) == 0:
         return
 
-    # 时间按升序记录，用二分查找找到最近的数据点
+    # \u65f6\u95f4\u6309\u5347\u5e8f\u8bb0\u5f55\uff0c\u7528\u4e8c\u5206\u67e5\u627e\u627e\u5230\u6700\u8fd1\u7684\u6570\u636e\u70b9
     index = int(np.searchsorted(xs, event.xdata))
     index = min(index, len(xs) - 1)
 
@@ -726,7 +693,7 @@ def show_nearest_value(event):
         if left_distance <= right_distance:
             index -= 1
 
-    # 仍然指向同一条记录时，不重复刷新
+    # \u4ecd\u7136\u6307\u5411\u540c\u4e00\u6761\u8bb0\u5f55\u65f6\uff0c\u4e0d\u91cd\u590d\u5237\u65b0
     selection = (axis, index)
 
     if selection == hover_state["selection"]:
