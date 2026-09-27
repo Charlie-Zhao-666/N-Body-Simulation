@@ -44,6 +44,7 @@ Sister project: [Neutron-Star-Modeling](https://github.com/Charlie-Zhao-666/Neut
 | `N body simulation.py` | Main simulation, latest version. Improvement over the previous upload: the stable-solution menu grew from 4 to 13 entries - nine Suvakov-Dmitrasinovic periodic three-body orbits were added, all stable-solution initial conditions moved into the new data module `stable_orbits.py` (the menu is generated from the data), and the animation view is now sized automatically for stable solutions. Earlier history: the first upload introduced leapfrog integration with RMSE error analysis; the second added random / imported seed control and interactive parameters; the third turned the placeholder "Known seeds" option into four exact stable periodic solutions. |
 | `stable_orbits.py` | Data module with the initial conditions of the known stable / periodic solutions, imported by the main program (must sit in the same folder). Each entry carries N, a recommended dt and step count (exactly one period for the three-body choreographies), zero-momentum initial positions and velocities, the period, a literature source, and an optional warning note. |
 | `time_step_tester.py` | Time-step scan tool, kept as a separate column (not an update of the main program). Runs the same initial conditions through a list of time steps (total physical time held fixed) and plots energy RMSE and normalized energy RMSE versus dt on log-log scales. Difference from the earlier local draft: the particle state and all record lists are now reset before each dt run, so every time step starts from identical initial conditions and results are not mixed across runs. Note: its seed menu still has the old placeholder option 3 - use option 1 or 2. |
+| `Galaxy simulation.py` | Galaxy demo, version 1 of a new galaxy-simulation track, kept as a separate file parallel to the two programs above (not an update of either). A central AGN (mass 1e6) anchors a vertically flared disk of 99 stars (radius 200-3000, sigma_z = 0.05 r; the first 5% are massive stars of 100-1000, the rest have mass 1) on initially circular orbits with small velocity noise, plus one outer perturber (mass 1e5) at 3x the disk radius. Same pairwise leapfrog scheme as the main program (dt = 3, 50000 steps), but rendered with vispy - a turntable camera locked on the center and color/size-coded populations - instead of matplotlib, and without the conservation diagnostics: it is a visual demo. Trail rendering exists in the code but is commented out. Requires `vispy`. |
 | `.gitignore` | Standard Python ignore rules. |
 | `README.md` | This file. |
 
@@ -82,6 +83,9 @@ Sister project: [Neutron-Star-Modeling](https://github.com/Charlie-Zhao-666/Neut
   motivates the planned adaptive time stepping.
 - 3D orbit animation with a playback slider and automatic view sizing
   for stable solutions; diagnostic plots with hover readout.
+- Galaxy demo, first version: an AGN-centered 100-body flared disk
+  plus an outer perturber, integrated with the same leapfrog scheme
+  and rendered interactively with vispy.
 
 ## Planned / future work
 
@@ -97,7 +101,10 @@ Sister project: [Neutron-Star-Modeling](https://github.com/Charlie-Zhao-666/Neut
 - More benchmark and convergence studies using the periodic reference
   solutions.
 - GPU acceleration (an early CuPy prototype exists locally).
-- Galaxy and galaxy-collision demos built on the same integrator.
+- Galaxy track: enable the commented-out trails in
+  `Galaxy simulation.py`, add conservation diagnostics to the galaxy
+  runs, and build a galaxy-collision demo on the same integrator (a
+  local draft exists).
 - Result images / animations and a written project report.
 
 ## How to run
@@ -111,7 +118,8 @@ Follow the on-screen menus to choose the seed mode, the time step and
 the number of steps. Keep `stable_orbits.py` in the same folder as the
 main program - the "Known seeds" menu imports it. (The current version
 imports `mplcursors`; the hover readout itself is implemented with
-matplotlib events.)
+matplotlib events.) `Galaxy simulation.py` additionally needs `vispy`
+(`pip install vispy`) and an OpenGL-capable backend.
 
 ## Units and conventions
 
