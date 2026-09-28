@@ -11,8 +11,8 @@ import secrets
 
 
 # global var
-dt = 1
-tot_time = 1000
+dt = 5
+tot_time = 10000
 G = 1
 N = 5
 
@@ -264,11 +264,87 @@ def leapfrog(stars):
         positions[i].append(stars[i]["pos"].copy())
 
 
-# main loop
-start_time = time.time()
-test_time = [0]
-test_result.append(test(stars))
+# Runge-Kutta 4th order method
+def rk4(stars):
+    accs = [np.zeros(3) for _ in range(N)]
+    for i in range(N):
+        for j in range(i+1, N):
+            a = acc(stars[i], stars[j])
+            accs[i] += a
+            accs[j] -= a * stars[i]["mass"] / stars[j]["mass"]
 
+    # K1
+    k1 = accs
+    v1 = np.array([star["v"] for star in stars])
+
+    # K2
+    v2 = v1 + 0.5 * dt * np.array(k1)
+    k2 = [np.zeros(3) for _ in range(N)]
+    temp_stars = []
+    for i in range(N):            
+        temp_stars.append({
+            "mass": stars[i]["mass"],
+            "pos": stars[i]["pos"] + 0.5 * dt * v1[i],
+            "v": v2[i]
+        })
+    for i in range(N):            
+        for j in range(i+1, N):
+            a = acc(temp_stars[i], temp_stars[j])
+            k2[i] += a
+            k2[j] -= a * temp_stars[i]["mass"] / temp_stars[j]["mass"]
+
+    # K3
+    v3 = v1 + 0.5 * dt * np.array(k2)
+    k3 = [np.zeros(3) for _ in range(N)]
+    temp_stars = []
+    for i in range(N):            
+        temp_stars.append({
+            "mass": stars[i]["mass"],
+            "pos": stars[i]["pos"] + 0.5 * dt * v2[i],
+            "v": v3[i]
+        })
+    for i in range(N):            
+        for j in range(i+1, N):
+            a = acc(temp_stars[i], temp_stars[j])
+            k3[i] += a
+            k3[j] -= a * temp_stars[i]["mass"] / temp_stars[j]["mass"]
+
+    # K4
+    v4 = v1 + dt * np.array(k3)
+    k4 = [np.zeros(3) for _ in range(N)]
+    temp_stars = []
+    for i in range(N):            
+        temp_stars.append({
+            "mass": stars[i]["mass"],
+            "pos": stars[i]["pos"] + dt * v3[i],
+            "v": v4[i]
+        })
+    for i in range(N):            
+        for j in range(i+1, N):
+            a = acc(temp_stars[i], temp_stars[j])
+            k4[i] += a
+            k4[j] -= a * temp_stars[i]["mass"] / temp_stars[j]["mass"]
+
+    # Update positions and velocities
+    for i in range(N):
+        stars[i]["pos"] += dt * (v1[i] + 2*v2[i] + 2*v3[i] + v4[i]) / 6
+        stars[i]["v"] += dt * (k1[i] + 2*k2[i] + 2*k3[i] + k4[i]) / 6
+
+        # record
+    for i in range(N):
+        positions[i].append(stars[i]["pos"].copy())
+
+
+
+
+
+
+
+# main loop
+#======================================================================================================================================================================
+#======================================================================================================================================================================
+#======================================================================================================================================================================
+#======================================================================================================================================================================
 energy_eigenvalue = 0
 sigma_Ep = 0
 sigma_Ek = 0
@@ -278,24 +354,76 @@ for i in range(N):
         sigma_Ep += Ep(stars[i], stars[j])
 energy_eigenvalue = sigma_Ek - sigma_Ep
 
+print("which method do you want to use?")
+print("1. Leapfrog")
+print("2. Runge-Kutta 4th order")
+
+method = input("Enter your choice (1 or 2): ")
+
+
+simpling_rate = 0
+if tot_time > 1000:
+    print("chose your simpling rate")
+    print("1. Every 10 steps.\n2. 1% of total steps.\n3. 0.1% of total steps.\n4. 0.01% of total steps.")
+    simpling_rate = int(input("Enter your choice (1, 2 or 3): "))
+
+
+start_time = time.time()
+test_time = [0]
+test_result.append(test(stars))
+
+
 for step in range(tot_time):
-    leapfrog(stars)
-    if (step + 1) % 10 == 0:
-        print(step/tot_time, "/", 1)
-        test_result.append(test(stars))
-        test_time += [(step + 1) * dt]
-    if step/tot_time == 0.01:
-        pridict_time = time.time()
-        print(f"remaining {(pridict_time-start_time)*99} s")
-    if step/tot_time == 0.05:
-        pridict_time = time.time()
-        print(f"remaining {(pridict_time-start_time)*19} s")
+    if method == "1":
+        leapfrog(stars)
+    elif method == "2":
+        rk4(stars)
+    else:
+        print("Invalid choice. Using Leapfrog by default.")
+        leapfrog(stars)
+
+    if simpling_rate in (0, 1):
+        if (step + 1) % 10 == 0:
+            print(step/tot_time, "/", 1)
+            test_result.append(test(stars))
+            test_time += [(step + 1) * dt]
+        if step/tot_time == 0.01:
+            pridict_time = time.time()
+            print(f"remaining {(pridict_time-start_time)*99} s")
+        if step/tot_time == 0.05:
+            pridict_time = time.time()
+            print(f"remaining {(pridict_time-start_time)*19} s")
+
+    elif simpling_rate == 2:
+        if (step + 1) % (tot_time // 100) == 0:
+            print(step/tot_time, "/", 1)
+            test_result.append(test(stars))
+            test_time += [(step + 1) * dt]
+        if step/tot_time == 0.01:
+            pridict_time = time.time()
+            print(f"remaining {(pridict_time-start_time)*99} s")
+        if step/tot_time == 0.05:
+            pridict_time = time.time()
+            print(f"remaining {(pridict_time-start_time)*19} s")
+
+    elif simpling_rate == 3:
+        if (step + 1) % (tot_time // 1000) == 0:
+            print(step/tot_time, "/", 1)
+            test_result.append(test(stars))
+            test_time += [(step + 1) * dt]
+        if step/tot_time == 0.01:
+            pridict_time = time.time()
+            print(f"remaining {(pridict_time-start_time)*99} s")
+        if step/tot_time == 0.05:
+            pridict_time = time.time()
+            print(f"remaining {(pridict_time-start_time)*19} s")
+
 end_time = time.time()
-print("report: simulation done!")
-print(f"simulation cost {end_time - start_time:.2f} s\n")
+print("\nreport: simulation done!")
+print(f"\nsimulation cost {end_time - start_time:.2f} s\n")
+
 
 # error analysis
-
 energy_result = np.array([
     result["energy"]
     for result in test_result
@@ -346,6 +474,13 @@ print("====================================")
 
 print(f"seed: {seed}, N = {N}, dt = {dt}, step = {tot_time}\n")
 
+
+
+
+
+
+
+
 # animation & plot
 # ============================================================================================================================================
 # ============================================================================================================================================
@@ -356,7 +491,8 @@ fig = plt.figure(figsize=(10, 8))
 fig.subplots_adjust(bottom=0.18)
 
 ax = fig.add_subplot(111, projection="3d")
-ax.set_title("N-body simulation")
+method_name = {"1": "Leapfrog (KDK)", "2": "Runge-Kutta 4th order"}.get(method, method)
+ax.set_title(f"N-body simulation\nseed = {seed}, dt = {dt}, method = {method_name}")
 ax.set_xlabel("X")
 ax.set_ylabel("Y")
 ax.set_zlabel("Z")
@@ -395,9 +531,7 @@ ax.set_xlim(-b, b)
 ax.set_ylim(-b, b)
 ax.set_zlim(-b, b)
 
-# positions \u7684\u7ed3\u6784\u662f\uFF1A
-# positions[\u6052\u661f\u7f16\u53f7][\u6b65\u6570][\u5750\u6807\u5206\u91cf]
-# \u63d0\u524d\u8f6c\u6210\u6570\u7ec4\uff0c\u907f\u514d\u6bcf\u6b21\u5237\u65b0\u90fd\u91cd\u65b0\u8f6c\u6362
+# positions[star][step][coordinate], converted to an array once
 trajectories = np.array(positions)
 
 # for the known stable solutions the orbit scale is ~1 instead of p, so the
@@ -409,10 +543,10 @@ if select_seeds == 3:
     ax.set_ylim(-b, b)
     ax.set_zlim(-b, b)
 
-# \u5305\u542b\u521d\u59cb\u72b6\u6001\uff0c\u6240\u4ee5\u6700\u540e\u4e00\u6b65\u662f\u8bb0\u5f55\u6570\u91cf\u51cf 1
+# positions include the initial state, so the last index is count - 1
 last_step = trajectories.shape[1] - 1
 
-# \u5f53\u524d\u64ad\u653e\u72b6\u6001
+# playback state
 playback = {
     "step": 0,
     "dragging": False,
@@ -420,11 +554,11 @@ playback = {
 
 
 def update(step):
-    """\u663e\u793a\u7b2c step \u6b65\uff1bstep=0 \u8868\u793a\u521d\u59cb\u72b6\u6001\u3002"""
+    """show step; step=0 is the initial state"""
     step = int(step)
 
     for i in range(N):
-        # \u5305\u542b\u521d\u59cb\u4f4d\u7f6e\u548c\u5f53\u524d\u6b65\u7684\u4f4d\u7f6e
+        # include the initial position up to the current step
         traj = trajectories[i, :step + 1]
 
         lines[i].set_data(traj[:, 0], traj[:, 1])
@@ -444,24 +578,24 @@ def update(step):
     return lines + points + [time_text]
 
 
-# ==================== \u53ef\u62d6\u52a8\u8fdb\u5ea6\u6761 ====================
+# ==================== draggable progress slider ====================
 
 slider_ax = fig.add_axes([0.20, 0.07, 0.60, 0.03])
 
 
 def on_press(event):
-    # \u5728\u8fdb\u5ea6\u6761\u4e0a\u6309\u4e0b\u9f20\u6807\u5de6\u952e\u65f6\uff0c\u6682\u505c\u81ea\u52a8\u63a8\u8fdb
+    # pause auto-advance while the slider is pressed
     if event.inaxes == slider_ax and event.button == 1:
         playback["dragging"] = True
 
 
 def on_release(event):
-    # \u677e\u5f00\u9f20\u6807\u5de6\u952e\u540e\uff0c\u6062\u590d\u81ea\u52a8\u63a8\u8fdb
+    # resume auto-advance on release
     if event.button == 1:
         playback["dragging"] = False
 
 
-# \u5148\u6ce8\u518c\u9f20\u6807\u4e8b\u4ef6\uff0c\u518d\u521b\u5efa Slider
+# register mouse events before creating the Slider
 fig.canvas.mpl_connect("button_press_event", on_press)
 fig.canvas.mpl_connect("button_release_event", on_release)
 
@@ -477,7 +611,7 @@ time_slider = Slider(
 
 
 def on_slider_change(value):
-    """\u624b\u52a8\u62d6\u52a8\u548c\u81ea\u52a8\u64ad\u653e\uff0c\u90fd\u901a\u8fc7\u8fd9\u91cc\u66f4\u65b0\u753b\u9762\u3002"""
+    """both slider drags and autoplay update through here"""
     playback["step"] = int(value)
     update(playback["step"])
     fig.canvas.draw_idle()
@@ -486,10 +620,10 @@ def on_slider_change(value):
 time_slider.on_changed(on_slider_change)
 
 
-# ==================== \u81ea\u52a8\u64ad\u653e ====================
+# ==================== autoplay ====================
 
 def init_animation():
-    # \u521d\u59cb\u5316\u65f6\u663e\u793a\u5f53\u524d\u8fdb\u5ea6\uff0c\u4e0d\u81ea\u52a8\u5411\u524d\u8df3\u4e00\u6b65
+    # show current progress on init, do not advance
     return update(playback["step"])
 
 
@@ -499,11 +633,11 @@ def animate(_):
 
     next_step = playback["step"] + 1
 
-    # \u5230\u8fbe\u6700\u540e\u4e00\u5e27\u540e\uff0c\u5faa\u73af\u64ad\u653e
+    # loop back to the first frame after the last one
     if next_step > last_step:
         next_step = 0
 
-    # set_val \u4f1a\u89e6\u53d1 on_slider_change
+    # set_val triggers on_slider_change
     time_slider.set_val(next_step)
 
     return lines + points + [time_text]
@@ -519,7 +653,7 @@ ani = FuncAnimation(
 )
 
 
-# ==================== \u7269\u7406\u91cf\u9a8c\u8bc1\u56fe ====================
+# ==================== conservation dashboard ====================
 
 times = np.asarray(test_time)
 
@@ -528,8 +662,7 @@ energies = np.array([
     for result in test_result
 ])
 
-# \u6bcf\u79cd\u5411\u91cf\u7269\u7406\u91cf\u7684\u6570\u636e\u5f62\u72b6\u90fd\u662f\uFF1A
-# (\u8bb0\u5f55\u65f6\u523b\u6570\u91cf, 3)
+# vector quantities are stored as (num_records, 3)
 vector_info = [
     ("momentum", "Total momentum", "P"),
     ("angular_momentum", "Total angular momentum", "L"),
@@ -541,12 +674,11 @@ fig_test = plt.figure(
     constrained_layout=True,
 )
 
-# \u5171\u56db\u884c\u3001\u56db\u5217
-# \u7b2c\u4e00\u884c\uff1a\u603b\u80fd\u91cf\uff0c\u5360\u6574\u884c
-# \u540e\u4e09\u884c\uff1a\u6bcf\u884c\u4e00\u4e2a\u5411\u91cf\u7269\u7406\u91cf\uff0c\u5206\u522b\u753b x\u3001y\u3001z\u3001\u6a21\u957f
+# 4x4 grid: energy on row 0, then one row per vector quantity (x, y, z, magnitude)
 grid = fig_test.add_gridspec(4, 4)
+fig_test.suptitle(f"seed = {seed}, dt = {dt}, method = {method_name}")
 
-# -------------------- \u603b\u80fd\u91cf --------------------
+# -------------------- total energy --------------------
 
 energy_ax = fig_test.add_subplot(grid[0, :])
 
@@ -563,7 +695,7 @@ energy_ax.set_xlabel("Time")
 energy_ax.set_ylabel("E")
 energy_ax.grid(True, alpha=0.3)
 
-# -------------------- \u5411\u91cf\u7269\u7406\u91cf --------------------
+# -------------------- vector quantities --------------------
 
 component_names = ["x", "y", "z"]
 component_colors = ["tab:red", "tab:green", "tab:blue"]
@@ -574,7 +706,7 @@ for row, (key, title, symbol) in enumerate(vector_info, start=1):
         for result in test_result
     ])
 
-    # x\u3001y\u3001z \u5206\u91cf\u5206\u522b\u753b\u5728\u4e09\u4e2a\u72ec\u7acb\u5b50\u56fe\u4e2d
+    # x, y, z components are plotted in separate subplots
     for component in range(3):
         axis = fig_test.add_subplot(
             grid[row, component],
@@ -588,8 +720,8 @@ for row, (key, title, symbol) in enumerate(vector_info, start=1):
             values[:, component],
             color=component_colors[component],
         )
-        
-        # \u8ba1\u7b97\u8be5\u5206\u91cf\u7684RMSE
+
+        # RMSE of this component
         component_rmse = RMSE(values[:, component])
         component_title = f"{title}: {name}\nRMSE: {component_rmse:.6e}"
         axis.set_title(component_title, fontsize=9)
@@ -597,7 +729,7 @@ for row, (key, title, symbol) in enumerate(vector_info, start=1):
         axis.set_ylabel(f"{symbol}_{name}")
         axis.grid(True, alpha=0.3)
 
-    # axis=1\uFF1A\u5bf9\u6bcf\u4e2a\u65f6\u523b\u7684\u4e09\u4e2a\u5206\u91cf\u8ba1\u7b97\u6a21\u957f
+    # magnitude of the three components
     magnitudes = np.linalg.norm(values, axis=1)
 
     magnitude_ax = fig_test.add_subplot(
@@ -610,7 +742,7 @@ for row, (key, title, symbol) in enumerate(vector_info, start=1):
         magnitudes,
         color="tab:purple",
     )
-    
+
     magnitude_rmse = RMSE(magnitudes)
     magnitude_title = f"{title}: magnitude\nRMSE: {magnitude_rmse:.6e}"
     magnitude_ax.set_title(magnitude_title, fontsize=9)
@@ -618,7 +750,7 @@ for row, (key, title, symbol) in enumerate(vector_info, start=1):
     magnitude_ax.set_ylabel(f"|{symbol}|")
     magnitude_ax.grid(True, alpha=0.3)
 
-# \u6bcf\u4e2a\u5b50\u56fe\u51c6\u5907\u4e00\u4e2a\u6570\u503c\u63d0\u793a\u6846
+# one hover tooltip per subplot
 hover_items = {}
 
 for axis in fig_test.axes:
@@ -646,27 +778,6 @@ for axis in fig_test.axes:
         "label": label,
     }
 
-# ==================== \u6dfb\u52a0RMSE\u6c47\u603b\u4fe1\u606f ====================
-
-# \u8ba1\u7b97\u6240\u6709RMSE\u503c
-# all_rmse_info = f"RMSE Summary:\nEnergy: {energy_rmse_final:.6e}"
-
-# for key, title, symbol in vector_info:
-#     values = np.array([result[key] for result in test_result])
-#     magnitudes = np.linalg.norm(values, axis=1)
-#     magnitude_rmse = RMSE(magnitudes)
-#     all_rmse_info += f"\n{title} (mag): {magnitude_rmse:.6e}"
-
-# # \u5728\u56fe\u8868\u53f3\u4e0a\u89d2\u6dfb\u52a0RMSE\u4fe1\u606f\u6846
-# fig_test.text(
-#     0.98, 0.98, all_rmse_info,
-#     transform=fig_test.transFigure,
-#     fontsize=9,
-#     verticalalignment='top',
-#     horizontalalignment='right',
-#     bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8, pad=0.8)
-# )
-
 hover_state = {"selection": None}
 
 
@@ -682,7 +793,7 @@ def show_nearest_value(event):
     if len(xs) == 0:
         return
 
-    # \u65f6\u95f4\u6309\u5347\u5e8f\u8bb0\u5f55\uff0c\u7528\u4e8c\u5206\u67e5\u627e\u627e\u5230\u6700\u8fd1\u7684\u6570\u636e\u70b9
+    # times are sorted: binary search for the nearest record
     index = int(np.searchsorted(xs, event.xdata))
     index = min(index, len(xs) - 1)
 
@@ -693,7 +804,7 @@ def show_nearest_value(event):
         if left_distance <= right_distance:
             index -= 1
 
-    # \u4ecd\u7136\u6307\u5411\u540c\u4e00\u6761\u8bb0\u5f55\u65f6\uff0c\u4e0d\u91cd\u590d\u5237\u65b0
+    # skip redraw when still pointing at the same record
     selection = (axis, index)
 
     if selection == hover_state["selection"]:
@@ -713,4 +824,36 @@ fig_test.canvas.mpl_connect(
     "motion_notify_event",
     show_nearest_value,
 )
+
+
+
+
 plt.show()
+
+# ask what to save after the windows are closed:
+# 1 = animation (gif), 2 = image (png), 3 = both, anything else = nothing
+print("save results?  1 = animation (gif)   2 = image (png)   3 = both   anything else = no")
+try:
+    save_choice = input().strip()
+except EOFError:
+    save_choice = ""
+
+base_name = f"seed_{seed}_method_{method_name}_dt_{dt}_time_{tot_time}"
+
+if save_choice in ("1", "3"):
+    # the interactive animation loops forever, so build a separate finite one
+    # for saving; the gif is capped at max_gif_frames frames (long runs get
+    # sub-sampled) -- change this number to raise/lower the cap
+    max_gif_frames = 2000
+    frame_stride = max(1, (last_step + 1) // max_gif_frames)
+    if frame_stride > 1:
+        print(f"saving every {frame_stride}th frame to keep the gif under {max_gif_frames} frames ...")
+    print("saving animation (this can take a while) ...")
+    save_ani = FuncAnimation(fig, update, frames=range(0, last_step + 1, frame_stride),
+                             interval=50, blit=False)
+    save_ani.save(f"{base_name}.gif", writer="pillow")
+    print(f"saved: {base_name}.gif")
+
+if save_choice in ("2", "3"):
+    fig_test.savefig(f"{base_name}.png", dpi=300)
+    print(f"saved: {base_name}.png")
