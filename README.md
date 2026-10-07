@@ -8,7 +8,7 @@ This is an educational and computational-research project under active developme
 
 Sister project: [Neutron-Star-Modeling](https://github.com/Charlie-Zhao-666/Neutron-Star-Modeling).
 
-## Completed features and engineering
+## Completed project work
 
 - **Physical model:** Direct pairwise Newtonian gravity in 3D; positions, velocities, and masses; computational units with G=1. Finite-precision point masses; no softening, collisions, or merger prescription.
 - **Integration:** Leapfrog kick-drift-kick (KDK) and classical fourth-order Runge-Kutta (RK4). Both exercised in step scans and Figure-8 / Butterfly I comparisons.
