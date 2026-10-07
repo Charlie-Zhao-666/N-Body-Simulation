@@ -1,0 +1,47 @@
+{
+  "base": {},
+  "runs": [
+    {
+      "initial_mode": "orbit",
+      "seed": 5,
+      "orbit_index": 4,
+      "dt": 7.793343548875e-05,
+      "total_time": 6.2346748391,
+      "method": "1",
+      "sample_every": 10,
+      "adaptive_enabled": false,
+      "adaptive_algorithm": "timescale",
+      "adaptive_eta": 0.03,
+      "acceleration_trigger_ratio": 2.0,
+      "acceleration_max_power": 3,
+      "compute_backend": "cpu",
+      "particle_count": 3,
+      "label": "Test 1"
+    },
+    {
+      "initial_mode": "orbit",
+      "seed": 5,
+      "orbit_index": 4,
+      "dt": 7.793343548875e-05,
+      "total_time": 6.2346748391,
+      "method": "2",
+      "sample_every": 10,
+      "adaptive_enabled": false,
+      "adaptive_algorithm": "timescale",
+      "adaptive_eta": 0.03,
+      "acceleration_trigger_ratio": 2.0,
+      "acceleration_max_power": 3,
+      "compute_backend": "cpu",
+      "particle_count": 3,
+      "label": "Test 2"
+    }
+  ],
+  "comparison": {
+    "rmse": true,
+    "nrmse": true,
+    "previous": false,
+    "reference": 2,
+    "samples": 1001,
+    "auto_reference": false
+  }
+}

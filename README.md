@@ -41,6 +41,8 @@ For GPU mode, install a CuPy package compatible with your NVIDIA driver/CUDA env
 
 ### Repeatable batch experiments
 
+The [original four experiments and two supplementary trials](plans/historical/README.md) now have loadable plans mapped to their historical data rows.
+
 Open **Test mode**, use **Load plan**, and select a JSON file from [`plans/`](plans/). Each plan contains initial conditions, dt, integrator, total duration, diagnostics settings and position-comparison settings. Start the batch to run the cases sequentially.
 
 - The reference runs first, even if a different case has a shorter dt.
