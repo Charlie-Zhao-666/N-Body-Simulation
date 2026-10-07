@@ -116,6 +116,7 @@ The detailed [benchmark plan](docs/cpu_gpu_benchmark_plan.md) explains the contr
 - Lower-overhead GPU execution and reduced host/device transfers; more efficient CPU implementation.
 - Chunked/on-disk trajectory recording to bound memory usage; safer long-run restart/resume.
 - Broader reference convergence, analytic two-body benchmarks, long-time and close-encounter tests.
+- Long-term energy drift and recovery analysis: evaluate sampling with trend fitting and relatively flat interval/baseline analysis; both remain candidates, with no method selected yet. See the [planned analysis](docs/ROADMAP.md#planned-long-term-energy-drift-and-recovery-analysis).
 - Controlled experiments with gravitational softening or regularization; document any physical model change.
 - Higher-order or alternative integrators beyond classical RK4; assess any method-switching scheme before adoption.
 - A formal project report with reproducible figures and a wider suite of initial conditions.
