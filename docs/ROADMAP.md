@@ -2,16 +2,21 @@
 
 ## Implemented
 
-- [x] 3D direct Newtonian point-mass model and reproducible initial states.
-- [x] KDK leapfrog and classical RK4 integration.
-- [x] Energy/momentum/angular-momentum/COM-velocity diagnostics, RMSE and normalized energy error.
-- [x] Per-star acceleration and velocity records; actual step sizes; interactive trajectory exploration.
-- [x] Timescale-based and acceleration-ratio-based adaptive stepping.
-- [x] Optional CuPy/CUDA computation using float64.
-- [x] Batch plans, selectable numerical reference, position RMSE/NRMSE and optional previous-run comparisons.
-- [x] Automatic local data/figure saving and lightweight published results.
-- [x] Original Butterfly I step, method, adaptive and proposed cost-matching experiments; four main and two supplementary [importable historical plans](../plans/historical/README.md).
-- [x] Figure-8 reference/cost/long-time studies and Butterfly I fixed/adaptive comparisons (45 additional CPU runs).
+Development order; the [README](../README.md#completed-features) describes each stage and its scope.
+
+- [x] Build the 3D direct Newtonian point-mass model with the original leapfrog update.
+- [x] Add energy and conservation diagnostics, RMSE and normalized energy error.
+- [x] Add random/specified seed control, followed by known stable orbit initial conditions.
+- [x] Add RK4 as an alternative to KDK, with sampling and end-of-run saving options.
+- [x] Build the interactive acceleration/energy view and per-star records; extend motion inspection and interface controls over subsequent updates.
+- [x] Add timescale-based adaptive stepping.
+- [x] Add optional CuPy/CUDA computation using float64.
+- [x] Add acceleration-ratio-based adaptive stepping with adjustable N and K.
+- [x] Expand run history, figure saving and animation export.
+- [x] Add batch Test mode, JSON plans and automatic per-run archives.
+- [x] Add numerical-reference position RMSE/NRMSE, previous-run comparisons and reference-ordering refinements.
+- [x] Complete the original Butterfly I step, method, adaptive and proposed cost-matching experiments; publish four main and two supplementary [importable historical plans](../plans/historical/README.md).
+- [x] Complete Figure-8 reference/cost/long-time studies and Butterfly I fixed/adaptive comparisons (45 additional CPU runs).
 
 ## Next: validation and performance
 
