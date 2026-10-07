@@ -1,0 +1,195 @@
+{
+  "plan": {
+    "base": {},
+    "runs": [
+      {
+        "initial_mode": "orbit",
+        "seed": 1,
+        "orbit_index": 0,
+        "dt": 0.001,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "Test 3"
+      },
+      {
+        "initial_mode": "orbit",
+        "seed": 1,
+        "orbit_index": 0,
+        "dt": 0.001,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "Test 1"
+      },
+      {
+        "initial_mode": "orbit",
+        "seed": 1,
+        "orbit_index": 0,
+        "dt": 0.0025,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "Test 2"
+      }
+    ],
+    "comparison": {
+      "rmse": true,
+      "nrmse": true,
+      "previous": false,
+      "reference": 1,
+      "samples": 1001,
+      "auto_reference": false
+    }
+  },
+  "jobs": [
+    {
+      "label": "Test 3",
+      "config": {
+        "initial_mode": "orbit",
+        "seed": 1,
+        "orbit_index": 0,
+        "dt": 0.001,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "2026-10-05_23-26-00.png",
+      "data": "2026-10-05_23-26-00.npz",
+      "run_id": "d278a63fa50825a9dd9c98bd76392772"
+    },
+    {
+      "label": "Test 1",
+      "config": {
+        "initial_mode": "orbit",
+        "seed": 1,
+        "orbit_index": 0,
+        "dt": 0.001,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "2026-10-05_23-26-02.png",
+      "data": "2026-10-05_23-26-02.npz",
+      "run_id": "69beba6730d710d3bb973389d242af96"
+    },
+    {
+      "label": "Test 2",
+      "config": {
+        "initial_mode": "orbit",
+        "seed": 1,
+        "orbit_index": 0,
+        "dt": 0.0025,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "2026-10-05_23-26-05.png",
+      "data": "2026-10-05_23-26-05.npz",
+      "run_id": "dd4764b0c56decd2f153d4ca18ebf607"
+    }
+  ],
+  "comparison": {
+    "rmse": true,
+    "nrmse": true,
+    "previous": false,
+    "reference": 1,
+    "samples": 1001,
+    "auto_reference": false,
+    "length_scale": 0.8164965832386197,
+    "time_start": 0.0,
+    "time_end": 6.5,
+    "alignment": "cubic Hermite interpolation using saved positions and velocities; exact saved nodes retained",
+    "normalization": "unweighted initial RMS radius about the mass-weighted center of mass of the reference test",
+    "metric": "sqrt(mean over stars and uniform time samples of squared 3D position distance); endpoints included"
+  },
+  "comparisons": [
+    {
+      "test": 2,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 3.0757082217626038e-06,
+      "nrmse": 3.7669578598392413e-06,
+      "per_star_rmse": [
+        3.2019825743875376e-06,
+        3.710894828104953e-06,
+        2.087225518317728e-06
+      ],
+      "per_star_nrmse": [
+        3.921611725167212e-06,
+        4.544899396131888e-06,
+        2.5563187417622544e-06
+      ]
+    },
+    {
+      "test": 3,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 1.2048906634615237e-10,
+      "nrmse": 1.4756836564855488e-10,
+      "per_star_rmse": [
+        1.23242701006544e-10,
+        1.3633865987488934e-10,
+        9.887290730545566e-11
+      ],
+      "per_star_nrmse": [
+        1.509408655670106e-10,
+        1.6698007398157673e-10,
+        1.2109408579920561e-10
+      ]
+    }
+  ],
+  "comparison_file": "batch_2026-10-05_23-25-59_851408_comparisons.dat"
+}

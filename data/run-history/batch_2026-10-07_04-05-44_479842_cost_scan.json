@@ -1,0 +1,1157 @@
+{
+  "plan": {
+    "base": {},
+    "runs": [
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.00025,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "Reference RK4 dt=0.00025"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.0005,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK dt=0.0005 repeat 1"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.0005,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK dt=0.0005 repeat 2"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.0005,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK dt=0.0005 repeat 3"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.001,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK dt=0.001 repeat 1"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.001,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK dt=0.001 repeat 2"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.001,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK dt=0.001 repeat 3"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.00125,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "RK4 dt=0.00125 repeat 1"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.00125,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "RK4 dt=0.00125 repeat 2"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.00125,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "RK4 dt=0.00125 repeat 3"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.002,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK dt=0.002 repeat 1"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.002,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK dt=0.002 repeat 2"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.002,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK dt=0.002 repeat 3"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.0025,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "RK4 dt=0.0025 repeat 1"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.0025,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "RK4 dt=0.0025 repeat 2"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.0025,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "RK4 dt=0.0025 repeat 3"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.005,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "RK4 dt=0.005 repeat 1"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.005,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "RK4 dt=0.005 repeat 2"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.005,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "RK4 dt=0.005 repeat 3"
+      }
+    ],
+    "comparison": {
+      "rmse": true,
+      "nrmse": true,
+      "previous": false,
+      "reference": 1,
+      "samples": 10001,
+      "auto_reference": false
+    }
+  },
+  "jobs": [
+    {
+      "label": "Reference RK4 dt=0.00025",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.00025,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-06.png",
+      "data": "2026-10-07_04-06-06.npz",
+      "run_id": "b8a8ea4cfd3f923d9a3f96035242f260",
+      "message": ""
+    },
+    {
+      "label": "KDK dt=0.0005 repeat 1",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.0005,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-12.png",
+      "data": "2026-10-07_04-06-12.npz",
+      "run_id": "175eb6195e032dae28e5a9402f45ff3e",
+      "message": ""
+    },
+    {
+      "label": "KDK dt=0.0005 repeat 2",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.0005,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-15.png",
+      "data": "2026-10-07_04-06-15.npz",
+      "run_id": "4a36f05d23a80bc018355a8bfed2aeb9",
+      "message": ""
+    },
+    {
+      "label": "KDK dt=0.0005 repeat 3",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.0005,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-18.png",
+      "data": "2026-10-07_04-06-18.npz",
+      "run_id": "0ed6a538a9dcc13e9dbaeef1455d55db",
+      "message": ""
+    },
+    {
+      "label": "KDK dt=0.001 repeat 1",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.001,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-21.png",
+      "data": "2026-10-07_04-06-21.npz",
+      "run_id": "331a38653faae6da3a40e2b96f700c47",
+      "message": ""
+    },
+    {
+      "label": "KDK dt=0.001 repeat 2",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.001,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-24.png",
+      "data": "2026-10-07_04-06-24.npz",
+      "run_id": "31445fb8a8e8350b2ecdc29e778b9cd5",
+      "message": ""
+    },
+    {
+      "label": "KDK dt=0.001 repeat 3",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.001,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-27.png",
+      "data": "2026-10-07_04-06-27.npz",
+      "run_id": "34cc15425c62414fa1786b25348fecf9",
+      "message": ""
+    },
+    {
+      "label": "RK4 dt=0.00125 repeat 1",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.00125,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-29.png",
+      "data": "2026-10-07_04-06-29.npz",
+      "run_id": "1567c5cb5ff776b68afa309c87ee0787",
+      "message": ""
+    },
+    {
+      "label": "RK4 dt=0.00125 repeat 2",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.00125,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-32.png",
+      "data": "2026-10-07_04-06-32.npz",
+      "run_id": "dc376f2028e7d2110ada22ff7464096d",
+      "message": ""
+    },
+    {
+      "label": "RK4 dt=0.00125 repeat 3",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.00125,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-36.png",
+      "data": "2026-10-07_04-06-36.npz",
+      "run_id": "93bea68cd1b299c99fa803f26c173c8e",
+      "message": ""
+    },
+    {
+      "label": "KDK dt=0.002 repeat 1",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.002,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-39.png",
+      "data": "2026-10-07_04-06-39.npz",
+      "run_id": "a2bf81f2cddd824e400a1c7252336e33",
+      "message": ""
+    },
+    {
+      "label": "KDK dt=0.002 repeat 2",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.002,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-41.png",
+      "data": "2026-10-07_04-06-41.npz",
+      "run_id": "35069c6fce7e91ed785a56d3a87199f2",
+      "message": ""
+    },
+    {
+      "label": "KDK dt=0.002 repeat 3",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.002,
+        "total_time": 6.5,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-44.png",
+      "data": "2026-10-07_04-06-44.npz",
+      "run_id": "5b783417ebde96cf3a398e1d98fbdd22",
+      "message": ""
+    },
+    {
+      "label": "RK4 dt=0.0025 repeat 1",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.0025,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-46.png",
+      "data": "2026-10-07_04-06-46.npz",
+      "run_id": "c8847ae6f0721b64557fa6a6c56e7660",
+      "message": ""
+    },
+    {
+      "label": "RK4 dt=0.0025 repeat 2",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.0025,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-49.png",
+      "data": "2026-10-07_04-06-49.npz",
+      "run_id": "6bbca3080c1bba800455b25f1cb4fe0a",
+      "message": ""
+    },
+    {
+      "label": "RK4 dt=0.0025 repeat 3",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.0025,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-51.png",
+      "data": "2026-10-07_04-06-51.npz",
+      "run_id": "c4ce15b3043b951a0714625cc7dfca07",
+      "message": ""
+    },
+    {
+      "label": "RK4 dt=0.005 repeat 1",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.005,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-54.png",
+      "data": "2026-10-07_04-06-54.npz",
+      "run_id": "2a7bb50b1493ddb2acb91005b71373e1",
+      "message": ""
+    },
+    {
+      "label": "RK4 dt=0.005 repeat 2",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.005,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-57.png",
+      "data": "2026-10-07_04-06-57.npz",
+      "run_id": "1dd715f18b9c94e3a571a6c15a0272ca",
+      "message": ""
+    },
+    {
+      "label": "RK4 dt=0.005 repeat 3",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 0,
+        "seed": 1,
+        "dt": 0.005,
+        "total_time": 6.5,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-06-59.png",
+      "data": "2026-10-07_04-06-59.npz",
+      "run_id": "317ffe890b9d684d87f28bcbc1b8c798",
+      "message": ""
+    }
+  ],
+  "comparison": {
+    "rmse": true,
+    "nrmse": true,
+    "previous": false,
+    "reference": 1,
+    "samples": 10001,
+    "auto_reference": false,
+    "length_scale": 0.8164965832386197,
+    "time_start": 0.0,
+    "time_end": 6.5,
+    "alignment": "cubic Hermite interpolation using saved positions and velocities; exact saved nodes retained",
+    "normalization": "unweighted initial RMS radius about the mass-weighted center of mass of the reference test",
+    "metric": "sqrt(mean over stars and uniform time samples of squared 3D position distance); endpoints included"
+  },
+  "suite_group": "cost_scan",
+  "suite_title": "Figure-8 cost versus accuracy, three timing repeats",
+  "comparisons": [
+    {
+      "test": 2,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 7.692053784475327e-07,
+      "nrmse": 9.420803396341143e-07,
+      "per_star_rmse": [
+        8.00771652315335e-07,
+        9.281198151937733e-07,
+        5.219091033797744e-07
+      ],
+      "per_star_nrmse": [
+        9.80740971553228e-07,
+        1.1367099804783039e-06,
+        6.392054958878467e-07
+      ]
+    },
+    {
+      "test": 3,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 7.692053784475327e-07,
+      "nrmse": 9.420803396341143e-07,
+      "per_star_rmse": [
+        8.00771652315335e-07,
+        9.281198151937733e-07,
+        5.219091033797744e-07
+      ],
+      "per_star_nrmse": [
+        9.80740971553228e-07,
+        1.1367099804783039e-06,
+        6.392054958878467e-07
+      ]
+    },
+    {
+      "test": 4,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 7.692053784475327e-07,
+      "nrmse": 9.420803396341143e-07,
+      "per_star_rmse": [
+        8.00771652315335e-07,
+        9.281198151937733e-07,
+        5.219091033797744e-07
+      ],
+      "per_star_nrmse": [
+        9.80740971553228e-07,
+        1.1367099804783039e-06,
+        6.392054958878467e-07
+      ]
+    },
+    {
+      "test": 5,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 3.076806332373528e-06,
+      "nrmse": 3.7683027651743848e-06,
+      "per_star_rmse": [
+        3.2030868275320926e-06,
+        3.712453811035842e-06,
+        2.0876142117300557e-06
+      ],
+      "per_star_nrmse": [
+        3.922964153538896e-06,
+        4.546808752475678e-06,
+        2.556794792024199e-06
+      ]
+    },
+    {
+      "test": 6,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 3.076806332373528e-06,
+      "nrmse": 3.7683027651743848e-06,
+      "per_star_rmse": [
+        3.2030868275320926e-06,
+        3.712453811035842e-06,
+        2.0876142117300557e-06
+      ],
+      "per_star_nrmse": [
+        3.922964153538896e-06,
+        4.546808752475678e-06,
+        2.556794792024199e-06
+      ]
+    },
+    {
+      "test": 7,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 3.076806332373528e-06,
+      "nrmse": 3.7683027651743848e-06,
+      "per_star_rmse": [
+        3.2030868275320926e-06,
+        3.712453811035842e-06,
+        2.0876142117300557e-06
+      ],
+      "per_star_nrmse": [
+        3.922964153538896e-06,
+        4.546808752475678e-06,
+        2.556794792024199e-06
+      ]
+    },
+    {
+      "test": 8,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 7.614462178604872e-12,
+      "nrmse": 9.325773475257225e-12,
+      "per_star_rmse": [
+        7.788982501878413e-12,
+        8.636160809373521e-12,
+        6.220014539234149e-12
+      ],
+      "per_star_nrmse": [
+        9.539516345535148e-12,
+        1.057709362985738e-11,
+        7.617930885347453e-12
+      ]
+    },
+    {
+      "test": 9,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 7.614462178604872e-12,
+      "nrmse": 9.325773475257225e-12,
+      "per_star_rmse": [
+        7.788982501878413e-12,
+        8.636160809373521e-12,
+        6.220014539234149e-12
+      ],
+      "per_star_nrmse": [
+        9.539516345535148e-12,
+        1.057709362985738e-11,
+        7.617930885347453e-12
+      ]
+    },
+    {
+      "test": 10,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 7.614462178604872e-12,
+      "nrmse": 9.325773475257225e-12,
+      "per_star_rmse": [
+        7.788982501878413e-12,
+        8.636160809373521e-12,
+        6.220014539234149e-12
+      ],
+      "per_star_nrmse": [
+        9.539516345535148e-12,
+        1.057709362985738e-11,
+        7.617930885347453e-12
+      ]
+    },
+    {
+      "test": 11,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 1.2306983704938972e-05,
+      "nrmse": 1.5072915132263667e-05,
+      "per_star_rmse": [
+        1.2812350483629397e-05,
+        1.4849410519931062e-05,
+        8.350103354815615e-06
+      ],
+      "per_star_nrmse": [
+        1.569186050088468e-05,
+        1.8186739326000765e-05,
+        1.0226746230455824e-05
+      ]
+    },
+    {
+      "test": 12,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 1.2306983704938972e-05,
+      "nrmse": 1.5072915132263667e-05,
+      "per_star_rmse": [
+        1.2812350483629397e-05,
+        1.4849410519931062e-05,
+        8.350103354815615e-06
+      ],
+      "per_star_nrmse": [
+        1.569186050088468e-05,
+        1.8186739326000765e-05,
+        1.0226746230455824e-05
+      ]
+    },
+    {
+      "test": 13,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 1.2306983704938972e-05,
+      "nrmse": 1.5072915132263667e-05,
+      "per_star_rmse": [
+        1.2812350483629397e-05,
+        1.4849410519931062e-05,
+        8.350103354815615e-06
+      ],
+      "per_star_nrmse": [
+        1.569186050088468e-05,
+        1.8186739326000765e-05,
+        1.0226746230455824e-05
+      ]
+    },
+    {
+      "test": 14,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 1.2362801868389339e-10,
+      "nrmse": 1.5141278141486517e-10,
+      "per_star_rmse": [
+        1.2645094929364342e-10,
+        1.3992965349024728e-10,
+        1.0139778354555348e-10
+      ],
+      "per_star_nrmse": [
+        1.548701511916656e-10,
+        1.7137812498273868e-10,
+        1.2418641501641182e-10
+      ]
+    },
+    {
+      "test": 15,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 1.2362801868389339e-10,
+      "nrmse": 1.5141278141486517e-10,
+      "per_star_rmse": [
+        1.2645094929364342e-10,
+        1.3992965349024728e-10,
+        1.0139778354555348e-10
+      ],
+      "per_star_nrmse": [
+        1.548701511916656e-10,
+        1.7137812498273868e-10,
+        1.2418641501641182e-10
+      ]
+    },
+    {
+      "test": 16,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 1.2362801868389339e-10,
+      "nrmse": 1.5141278141486517e-10,
+      "per_star_rmse": [
+        1.2645094929364342e-10,
+        1.3992965349024728e-10,
+        1.0139778354555348e-10
+      ],
+      "per_star_nrmse": [
+        1.548701511916656e-10,
+        1.7137812498273868e-10,
+        1.2418641501641182e-10
+      ]
+    },
+    {
+      "test": 17,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 2.034712454098227e-09,
+      "nrmse": 2.4920036358603913e-09,
+      "per_star_rmse": [
+        2.078681554645853e-09,
+        2.294752447529583e-09,
+        1.6832583020794581e-09
+      ],
+      "per_star_nrmse": [
+        2.5458545661033855e-09,
+        2.81048628327076e-09,
+        2.061561966864384e-09
+      ]
+    },
+    {
+      "test": 18,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 2.034712454098227e-09,
+      "nrmse": 2.4920036358603913e-09,
+      "per_star_rmse": [
+        2.078681554645853e-09,
+        2.294752447529583e-09,
+        1.6832583020794581e-09
+      ],
+      "per_star_nrmse": [
+        2.5458545661033855e-09,
+        2.81048628327076e-09,
+        2.061561966864384e-09
+      ]
+    },
+    {
+      "test": 19,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 2.034712454098227e-09,
+      "nrmse": 2.4920036358603913e-09,
+      "per_star_rmse": [
+        2.078681554645853e-09,
+        2.294752447529583e-09,
+        1.6832583020794581e-09
+      ],
+      "per_star_nrmse": [
+        2.5458545661033855e-09,
+        2.81048628327076e-09,
+        2.061561966864384e-09
+      ]
+    }
+  ],
+  "comparison_file": "batch_2026-10-07_04-05-44_479842_cost_scan_comparisons.dat"
+}

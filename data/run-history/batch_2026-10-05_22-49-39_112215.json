@@ -1,0 +1,195 @@
+{
+  "plan": {
+    "base": {},
+    "runs": [
+      {
+        "initial_mode": "orbit",
+        "seed": 5,
+        "orbit_index": 4,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "Test 1"
+      },
+      {
+        "initial_mode": "orbit",
+        "seed": 5,
+        "orbit_index": 4,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "Test 2"
+      },
+      {
+        "initial_mode": "orbit",
+        "seed": 5,
+        "orbit_index": 4,
+        "dt": 0.000311733741955,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "Test 3"
+      }
+    ],
+    "comparison": {
+      "rmse": true,
+      "nrmse": true,
+      "previous": false,
+      "reference": 1,
+      "samples": 1001,
+      "auto_reference": true
+    }
+  },
+  "jobs": [
+    {
+      "label": "Test 1",
+      "config": {
+        "initial_mode": "orbit",
+        "seed": 5,
+        "orbit_index": 4,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "2026-10-05_22-49-39.png",
+      "data": "2026-10-05_22-49-39.npz",
+      "run_id": "fa6d540c16110f438480c4cb66dda6e6"
+    },
+    {
+      "label": "Test 2",
+      "config": {
+        "initial_mode": "orbit",
+        "seed": 5,
+        "orbit_index": 4,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "2026-10-05_22-49-53.png",
+      "data": "2026-10-05_22-49-53.npz",
+      "run_id": "66279cda47e3b5982952550706500513"
+    },
+    {
+      "label": "Test 3",
+      "config": {
+        "initial_mode": "orbit",
+        "seed": 5,
+        "orbit_index": 4,
+        "dt": 0.000311733741955,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "2026-10-05_22-50-01.png",
+      "data": "2026-10-05_22-50-01.npz",
+      "run_id": "972d637660028116697e53f0c3393f73"
+    }
+  ],
+  "comparison": {
+    "rmse": true,
+    "nrmse": true,
+    "previous": false,
+    "reference": 1,
+    "samples": 1001,
+    "auto_reference": true,
+    "length_scale": 0.816496580927726,
+    "time_start": 0.0,
+    "time_end": 6.2346748391,
+    "alignment": "cubic Hermite interpolation using saved positions and velocities; exact saved nodes retained",
+    "normalization": "unweighted initial RMS radius about the mass-weighted center of mass of the reference test",
+    "metric": "sqrt(mean over stars and uniform time samples of squared 3D position distance); endpoints included"
+  },
+  "comparisons": [
+    {
+      "test": 2,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.0016231310964417787,
+      "nrmse": 0.001987921485963275,
+      "per_star_rmse": [
+        0.0020219932478454544,
+        0.0012020522507559964,
+        0.0015395705118079874
+      ],
+      "per_star_nrmse": [
+        0.0024764258602871423,
+        0.0014722073292581228,
+        0.0018855810884825565
+      ]
+    },
+    {
+      "test": 3,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 12.331998888740424,
+      "nrmse": 15.10355239299161,
+      "per_star_rmse": [
+        0.3427276775731882,
+        15.198527801911936,
+        15.004062122279425
+      ],
+      "per_star_nrmse": [
+        0.4197539653917124,
+        18.614318978094126,
+        18.37614813430253
+      ]
+    }
+  ],
+  "comparison_file": "batch_2026-10-05_22-49-39_112215_comparisons.dat"
+}

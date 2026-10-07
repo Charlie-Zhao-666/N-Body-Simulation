@@ -1,0 +1,195 @@
+{
+  "plan": {
+    "base": {},
+    "runs": [
+      {
+        "initial_mode": "orbit",
+        "seed": 5,
+        "orbit_index": 4,
+        "dt": 7.793343548875e-06,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "Test 1"
+      },
+      {
+        "initial_mode": "orbit",
+        "seed": 5,
+        "orbit_index": 4,
+        "dt": 7.793343548875e-06,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "Test 2"
+      },
+      {
+        "initial_mode": "orbit",
+        "seed": 5,
+        "orbit_index": 4,
+        "dt": 3.11733741955e-05,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "Test 3"
+      }
+    ],
+    "comparison": {
+      "rmse": true,
+      "nrmse": true,
+      "previous": false,
+      "reference": 1,
+      "samples": 1001,
+      "auto_reference": false
+    }
+  },
+  "jobs": [
+    {
+      "label": "Test 1",
+      "config": {
+        "initial_mode": "orbit",
+        "seed": 5,
+        "orbit_index": 4,
+        "dt": 7.793343548875e-06,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "2026-10-05_22-51-28.png",
+      "data": "2026-10-05_22-51-28.npz",
+      "run_id": "4709535b9b2c516e66e9027a64df6053"
+    },
+    {
+      "label": "Test 2",
+      "config": {
+        "initial_mode": "orbit",
+        "seed": 5,
+        "orbit_index": 4,
+        "dt": 7.793343548875e-06,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "2026-10-05_22-56-06.png",
+      "data": "2026-10-05_22-56-06.npz",
+      "run_id": "85e30b4f7aa9c3a6e0857e9c784f5652"
+    },
+    {
+      "label": "Test 3",
+      "config": {
+        "initial_mode": "orbit",
+        "seed": 5,
+        "orbit_index": 4,
+        "dt": 3.11733741955e-05,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "2026-10-05_22-58-14.png",
+      "data": "2026-10-05_22-58-14.npz",
+      "run_id": "12945e4b55299268211e3a09049027c2"
+    }
+  ],
+  "comparison": {
+    "rmse": true,
+    "nrmse": true,
+    "previous": false,
+    "reference": 1,
+    "samples": 1001,
+    "auto_reference": false,
+    "length_scale": 0.816496580927726,
+    "time_start": 0.0,
+    "time_end": 6.2346748391,
+    "alignment": "cubic Hermite interpolation using saved positions and velocities; exact saved nodes retained",
+    "normalization": "unweighted initial RMS radius about the mass-weighted center of mass of the reference test",
+    "metric": "sqrt(mean over stars and uniform time samples of squared 3D position distance); endpoints included"
+  },
+  "comparisons": [
+    {
+      "test": 2,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 1.6070652352307668e-05,
+      "nrmse": 1.9682449048405992e-05,
+      "per_star_rmse": [
+        2.0021784173115243e-05,
+        1.2223748166613496e-05,
+        1.498351562119522e-05
+      ],
+      "per_star_nrmse": [
+        2.4521577482132183e-05,
+        1.4970972876242219e-05,
+        1.8350983912474605e-05
+      ]
+    },
+    {
+      "test": 3,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 1.7318893997852875e-06,
+      "nrmse": 2.121122660204488e-06,
+      "per_star_rmse": [
+        1.4206940229108392e-06,
+        1.5466742034638516e-06,
+        2.141903378042718e-06
+      ],
+      "per_star_nrmse": [
+        1.739987718376735e-06,
+        1.8942812984060235e-06,
+        2.6232851772741387e-06
+      ]
+    }
+  ],
+  "comparison_file": "batch_2026-10-05_22-51-28_408049_comparisons.dat"
+}

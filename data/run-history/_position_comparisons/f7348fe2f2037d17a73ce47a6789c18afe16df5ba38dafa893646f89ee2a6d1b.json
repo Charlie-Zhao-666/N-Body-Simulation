@@ -1,0 +1,23 @@
+{
+  "run_id": "64c46bdcaac8e4fd151cdccf053716e4",
+  "reference_test": 1,
+  "reference_run_id": "eebfa75cfa1bb519b0b5ac9b196b107e",
+  "reference_comparison_count": null,
+  "rmse": 3.857289406116925e-06,
+  "nrmse": 4.7241954176148115e-06,
+  "status": "saved",
+  "settings": {
+    "rmse": true,
+    "nrmse": true,
+    "previous": false,
+    "reference": 1,
+    "samples": 1001,
+    "auto_reference": true,
+    "length_scale": 0.816496580927726,
+    "time_start": 0.0,
+    "time_end": 6.2346748391,
+    "alignment": "cubic Hermite interpolation using saved positions and velocities; exact saved nodes retained",
+    "normalization": "unweighted initial RMS radius about the mass-weighted center of mass of the reference test",
+    "metric": "sqrt(mean over stars and uniform time samples of squared 3D position distance); endpoints included"
+  }
+}

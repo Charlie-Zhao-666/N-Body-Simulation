@@ -1,0 +1,797 @@
+{
+  "plan": {
+    "base": {},
+    "runs": [
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 3.8966717744375e-06,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "Reference RK4 h/20"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-06,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "Reference check RK4 h/10"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 1.94833588721875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK fixed h/4"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 1.94833588721875e-05,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "RK4 fixed h/4"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 3.8966717744375e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK fixed h/2"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 3.8966717744375e-05,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "RK4 fixed h/2"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK fixed h/1"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "RK4 fixed h/1"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": true,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK timescale eta=0.03"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": true,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.01,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK timescale eta=0.01"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": true,
+        "adaptive_algorithm": "acceleration_ratio",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 7,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK ratio N=2 K=7"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": true,
+        "adaptive_algorithm": "acceleration_ratio",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 3.0,
+        "acceleration_max_power": 4,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK ratio N=3 K=4"
+      },
+      {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": true,
+        "adaptive_algorithm": "acceleration_ratio",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 5.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3,
+        "label": "KDK ratio N=5 K=3"
+      }
+    ],
+    "comparison": {
+      "rmse": true,
+      "nrmse": true,
+      "previous": false,
+      "reference": 1,
+      "samples": 20001,
+      "auto_reference": false
+    }
+  },
+  "jobs": [
+    {
+      "label": "Reference RK4 h/20",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 3.8966717744375e-06,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-14-19.png",
+      "data": "2026-10-07_04-14-19.npz",
+      "run_id": "9fc457830b1d6bba6a85aac93a8bd948",
+      "message": ""
+    },
+    {
+      "label": "Reference check RK4 h/10",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-06,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-18-19.png",
+      "data": "2026-10-07_04-18-19.npz",
+      "run_id": "572b903fd04f717bb6517354f8e80c4d",
+      "message": ""
+    },
+    {
+      "label": "KDK fixed h/4",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 1.94833588721875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-20-20.png",
+      "data": "2026-10-07_04-20-20.npz",
+      "run_id": "4b980f68a66a15aca0fb17887d678860",
+      "message": ""
+    },
+    {
+      "label": "RK4 fixed h/4",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 1.94833588721875e-05,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-20-46.png",
+      "data": "2026-10-07_04-20-46.npz",
+      "run_id": "688be299e0d5ad585df1af92a6516971",
+      "message": ""
+    },
+    {
+      "label": "KDK fixed h/2",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 3.8966717744375e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-21-35.png",
+      "data": "2026-10-07_04-21-35.npz",
+      "run_id": "c42aa0608fc4d956a1e99c4fbb92138c",
+      "message": ""
+    },
+    {
+      "label": "RK4 fixed h/2",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 3.8966717744375e-05,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-21-49.png",
+      "data": "2026-10-07_04-21-49.npz",
+      "run_id": "fbad4daadbd7a6261562c676a12e9850",
+      "message": ""
+    },
+    {
+      "label": "KDK fixed h/1",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-22-15.png",
+      "data": "2026-10-07_04-22-15.npz",
+      "run_id": "efd6675129fd628029a2eb0174594e83",
+      "message": ""
+    },
+    {
+      "label": "RK4 fixed h/1",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-22-23.png",
+      "data": "2026-10-07_04-22-23.npz",
+      "run_id": "3d622f32dc5e5ebc26efec76d214caa9",
+      "message": ""
+    },
+    {
+      "label": "KDK timescale eta=0.03",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": true,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-22-38.png",
+      "data": "2026-10-07_04-22-38.npz",
+      "run_id": "f52bf203b3f519f81f962af754167464",
+      "message": ""
+    },
+    {
+      "label": "KDK timescale eta=0.01",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": true,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.01,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-22-47.png",
+      "data": "2026-10-07_04-22-47.npz",
+      "run_id": "161e8b5bdcec73cd44975d6d6ddc97c4",
+      "message": ""
+    },
+    {
+      "label": "KDK ratio N=2 K=7",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": true,
+        "adaptive_algorithm": "acceleration_ratio",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 7,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-22-56.png",
+      "data": "2026-10-07_04-22-56.npz",
+      "run_id": "a5a6e2ed8cc94fe8f13cfc9b73a95f6e",
+      "message": ""
+    },
+    {
+      "label": "KDK ratio N=3 K=4",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": true,
+        "adaptive_algorithm": "acceleration_ratio",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 3.0,
+        "acceleration_max_power": 4,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-24-07.png",
+      "data": "2026-10-07_04-24-07.npz",
+      "run_id": "8c4d9b5551b60f816c821f6de6e97a0b",
+      "message": ""
+    },
+    {
+      "label": "KDK ratio N=5 K=3",
+      "config": {
+        "initial_mode": "orbit",
+        "orbit_index": 4,
+        "seed": 1,
+        "dt": 7.793343548875e-05,
+        "total_time": 6.2346748391,
+        "method": "1",
+        "sample_every": 10,
+        "adaptive_enabled": true,
+        "adaptive_algorithm": "acceleration_ratio",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 5.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "particle_count": 3
+      },
+      "status": "saved",
+      "plot": "2026-10-07_04-25-12.png",
+      "data": "2026-10-07_04-25-12.npz",
+      "run_id": "946528dc326bfd356fe27d91a58e7c06",
+      "message": ""
+    }
+  ],
+  "comparison": {
+    "rmse": true,
+    "nrmse": true,
+    "previous": false,
+    "reference": 1,
+    "samples": 20001,
+    "auto_reference": false,
+    "length_scale": 0.816496580927726,
+    "time_start": 0.0,
+    "time_end": 6.2346748391,
+    "alignment": "cubic Hermite interpolation using saved positions and velocities; exact saved nodes retained",
+    "normalization": "unweighted initial RMS radius about the mass-weighted center of mass of the reference test",
+    "metric": "sqrt(mean over stars and uniform time samples of squared 3D position distance); endpoints included"
+  },
+  "suite_group": "butterfly_adaptive",
+  "suite_title": "Butterfly I fixed and adaptive cost versus accuracy",
+  "comparisons": [
+    {
+      "test": 2,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 1.7466622385065712e-09,
+      "nrmse": 2.1392156186642757e-09,
+      "per_star_rmse": [
+        1.4793905366592685e-09,
+        1.5472713340326514e-09,
+        2.1377188742204104e-09
+      ],
+      "per_star_nrmse": [
+        1.8118759725586897e-09,
+        1.895012631007712e-09,
+        2.618160227678449e-09
+      ]
+    },
+    {
+      "test": 3,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.00010069630517258482,
+      "nrmse": 0.0001233272833282056,
+      "per_star_rmse": [
+        0.00012555640884078236,
+        7.626837620528591e-05,
+        9.401042823137364e-05
+      ],
+      "per_star_nrmse": [
+        0.00015377456779809378,
+        9.340930260678823e-05,
+        0.00011513878983370192
+      ]
+    },
+    {
+      "test": 4,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 1.6815628425915522e-07,
+      "nrmse": 2.0594854673866655e-07,
+      "per_star_rmse": [
+        1.388275047519436e-07,
+        1.4992352861316257e-07,
+        2.0755593776152152e-07
+      ],
+      "per_star_nrmse": [
+        1.700282744530344e-07,
+        1.83618072769901e-07,
+        2.542030703002953e-07
+      ]
+    },
+    {
+      "test": 5,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.0004015169113289564,
+      "nrmse": 0.0004917557779271308,
+      "per_star_rmse": [
+        0.000501379367989457,
+        0.00030230504103624477,
+        0.00037533702424354755
+      ],
+      "per_star_nrmse": [
+        0.0006140618095666437,
+        0.00037024654860496464,
+        0.00045969209548566537
+      ]
+    },
+    {
+      "test": 6,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 5.337739374450123e-06,
+      "nrmse": 6.537368923682737e-06,
+      "per_star_rmse": [
+        4.375468886902783e-06,
+        4.767800857043966e-06,
+        6.60285785822942e-06
+      ],
+      "per_star_nrmse": [
+        5.358833079167648e-06,
+        5.8393396474810195e-06,
+        8.086816298394134e-06
+      ]
+    },
+    {
+      "test": 7,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.0015876937096534756,
+      "nrmse": 0.001944519728238781,
+      "per_star_rmse": [
+        0.001993079295956735,
+        0.0011688092606900752,
+        0.0014912524196705737
+      ],
+      "per_star_nrmse": [
+        0.00244101364599977,
+        0.0014314931476651644,
+        0.0018264037529418327
+      ]
+    },
+    {
+      "test": 8,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.0001696508129133744,
+      "nrmse": 0.00020777896304306927,
+      "per_star_rmse": [
+        0.00013865670752023876,
+        0.00015165485814003745,
+        0.00021004598646172287
+      ],
+      "per_star_nrmse": [
+        0.000169819091419456,
+        0.00018573850972862985,
+        0.0002572527446753822
+      ]
+    },
+    {
+      "test": 9,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.00014558962177741846,
+      "nrmse": 0.00017831014259973445,
+      "per_star_rmse": [
+        0.0001666350158445933,
+        0.00014643659445865277,
+        0.00011990875366585855
+      ],
+      "per_star_nrmse": [
+        0.00020408538104992182,
+        0.00017934746804728496,
+        0.00014685763108721766
+      ]
+    },
+    {
+      "test": 10,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 6.896021137663988e-05,
+      "nrmse": 8.44586652136196e-05,
+      "per_star_rmse": [
+        5.8752874392295476e-05,
+        5.882423066129692e-05,
+        8.575745971682117e-05
+      ],
+      "per_star_nrmse": [
+        7.195728159147811e-05,
+        7.204467481597926e-05,
+        0.00010503100897174752
+      ]
+    },
+    {
+      "test": 11,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 5.730281382895903e-07,
+      "nrmse": 7.01813273533246e-07,
+      "per_star_rmse": [
+        4.4688953487116407e-07,
+        5.350394975563803e-07,
+        7.06474501657458e-07
+      ],
+      "per_star_nrmse": [
+        5.473256659120309e-07,
+        6.552868806241095e-07,
+        8.652510226739005e-07
+      ]
+    },
+    {
+      "test": 12,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 1.0374591368669802e-06,
+      "nrmse": 1.2706227571561785e-06,
+      "per_star_rmse": [
+        8.319138538688284e-07,
+        9.622586483105545e-07,
+        1.2692289058711956e-06
+      ],
+      "per_star_nrmse": [
+        1.0188822259654595e-06,
+        1.1785213444705543e-06,
+        1.5544815930877047e-06
+      ]
+    },
+    {
+      "test": 13,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 2.315320420513159e-06,
+      "nrmse": 2.8356768106517086e-06,
+      "per_star_rmse": [
+        1.6977701909292686e-06,
+        2.207870170693068e-06,
+        2.885309625861923e-06
+      ],
+      "per_star_nrmse": [
+        2.079335334142141e-06,
+        2.704077668254807e-06,
+        3.533768166651175e-06
+      ]
+    }
+  ],
+  "comparison_file": "batch_2026-10-07_04-05-44_587952_butterfly_adaptive_comparisons.dat"
+}

@@ -1,0 +1,82 @@
+# Position comparisons: relative trajectory differences, not exact-solution errors.
+# Reference: Test 1; previous means the preceding executed run (reference first, then ascending dt).
+# Common time interval: [0, 6.5]; uniform samples: 10001 (including endpoints).
+# Length scale: 0.8164965832386197; unweighted initial RMS radius about the mass-weighted center of mass of the reference test.
+# Alignment: cubic Hermite interpolation using saved positions and velocities; exact saved nodes retained.
+# Metric: sqrt(mean over stars and uniform time samples of squared 3D position distance); endpoints included.
+# Per-star values and full settings are stored in the companion batch JSON.
+
+
+  Test  Against Kind                   Star                    RMSE                   NRMSE Status
+     2        1 reference               All  7.6920537844753272e-07  9.4208033963411426e-07 saved
+     2        1 reference                 1  8.0077165231533501e-07  9.8074097155322798e-07 saved
+     2        1 reference                 2  9.2811981519377334e-07  1.1367099804783039e-06 saved
+     2        1 reference                 3  5.2190910337977444e-07  6.3920549588784668e-07 saved
+     3        1 reference               All  7.6920537844753272e-07  9.4208033963411426e-07 saved
+     3        1 reference                 1  8.0077165231533501e-07  9.8074097155322798e-07 saved
+     3        1 reference                 2  9.2811981519377334e-07  1.1367099804783039e-06 saved
+     3        1 reference                 3  5.2190910337977444e-07  6.3920549588784668e-07 saved
+     4        1 reference               All  7.6920537844753272e-07  9.4208033963411426e-07 saved
+     4        1 reference                 1  8.0077165231533501e-07  9.8074097155322798e-07 saved
+     4        1 reference                 2  9.2811981519377334e-07  1.1367099804783039e-06 saved
+     4        1 reference                 3  5.2190910337977444e-07  6.3920549588784668e-07 saved
+     5        1 reference               All  3.0768063323735280e-06  3.7683027651743848e-06 saved
+     5        1 reference                 1  3.2030868275320926e-06  3.9229641535388962e-06 saved
+     5        1 reference                 2  3.7124538110358421e-06  4.5468087524756783e-06 saved
+     5        1 reference                 3  2.0876142117300557e-06  2.5567947920241989e-06 saved
+     6        1 reference               All  3.0768063323735280e-06  3.7683027651743848e-06 saved
+     6        1 reference                 1  3.2030868275320926e-06  3.9229641535388962e-06 saved
+     6        1 reference                 2  3.7124538110358421e-06  4.5468087524756783e-06 saved
+     6        1 reference                 3  2.0876142117300557e-06  2.5567947920241989e-06 saved
+     7        1 reference               All  3.0768063323735280e-06  3.7683027651743848e-06 saved
+     7        1 reference                 1  3.2030868275320926e-06  3.9229641535388962e-06 saved
+     7        1 reference                 2  3.7124538110358421e-06  4.5468087524756783e-06 saved
+     7        1 reference                 3  2.0876142117300557e-06  2.5567947920241989e-06 saved
+     8        1 reference               All  7.6144621786048724e-12  9.3257734752572246e-12 saved
+     8        1 reference                 1  7.7889825018784129e-12  9.5395163455351477e-12 saved
+     8        1 reference                 2  8.6361608093735209e-12  1.0577093629857380e-11 saved
+     8        1 reference                 3  6.2200145392341491e-12  7.6179308853474532e-12 saved
+     9        1 reference               All  7.6144621786048724e-12  9.3257734752572246e-12 saved
+     9        1 reference                 1  7.7889825018784129e-12  9.5395163455351477e-12 saved
+     9        1 reference                 2  8.6361608093735209e-12  1.0577093629857380e-11 saved
+     9        1 reference                 3  6.2200145392341491e-12  7.6179308853474532e-12 saved
+    10        1 reference               All  7.6144621786048724e-12  9.3257734752572246e-12 saved
+    10        1 reference                 1  7.7889825018784129e-12  9.5395163455351477e-12 saved
+    10        1 reference                 2  8.6361608093735209e-12  1.0577093629857380e-11 saved
+    10        1 reference                 3  6.2200145392341491e-12  7.6179308853474532e-12 saved
+    11        1 reference               All  1.2306983704938972e-05  1.5072915132263667e-05 saved
+    11        1 reference                 1  1.2812350483629397e-05  1.5691860500884678e-05 saved
+    11        1 reference                 2  1.4849410519931062e-05  1.8186739326000765e-05 saved
+    11        1 reference                 3  8.3501033548156148e-06  1.0226746230455824e-05 saved
+    12        1 reference               All  1.2306983704938972e-05  1.5072915132263667e-05 saved
+    12        1 reference                 1  1.2812350483629397e-05  1.5691860500884678e-05 saved
+    12        1 reference                 2  1.4849410519931062e-05  1.8186739326000765e-05 saved
+    12        1 reference                 3  8.3501033548156148e-06  1.0226746230455824e-05 saved
+    13        1 reference               All  1.2306983704938972e-05  1.5072915132263667e-05 saved
+    13        1 reference                 1  1.2812350483629397e-05  1.5691860500884678e-05 saved
+    13        1 reference                 2  1.4849410519931062e-05  1.8186739326000765e-05 saved
+    13        1 reference                 3  8.3501033548156148e-06  1.0226746230455824e-05 saved
+    14        1 reference               All  1.2362801868389339e-10  1.5141278141486517e-10 saved
+    14        1 reference                 1  1.2645094929364342e-10  1.5487015119166560e-10 saved
+    14        1 reference                 2  1.3992965349024728e-10  1.7137812498273868e-10 saved
+    14        1 reference                 3  1.0139778354555348e-10  1.2418641501641182e-10 saved
+    15        1 reference               All  1.2362801868389339e-10  1.5141278141486517e-10 saved
+    15        1 reference                 1  1.2645094929364342e-10  1.5487015119166560e-10 saved
+    15        1 reference                 2  1.3992965349024728e-10  1.7137812498273868e-10 saved
+    15        1 reference                 3  1.0139778354555348e-10  1.2418641501641182e-10 saved
+    16        1 reference               All  1.2362801868389339e-10  1.5141278141486517e-10 saved
+    16        1 reference                 1  1.2645094929364342e-10  1.5487015119166560e-10 saved
+    16        1 reference                 2  1.3992965349024728e-10  1.7137812498273868e-10 saved
+    16        1 reference                 3  1.0139778354555348e-10  1.2418641501641182e-10 saved
+    17        1 reference               All  2.0347124540982269e-09  2.4920036358603913e-09 saved
+    17        1 reference                 1  2.0786815546458531e-09  2.5458545661033855e-09 saved
+    17        1 reference                 2  2.2947524475295830e-09  2.8104862832707601e-09 saved
+    17        1 reference                 3  1.6832583020794581e-09  2.0615619668643841e-09 saved
+    18        1 reference               All  2.0347124540982269e-09  2.4920036358603913e-09 saved
+    18        1 reference                 1  2.0786815546458531e-09  2.5458545661033855e-09 saved
+    18        1 reference                 2  2.2947524475295830e-09  2.8104862832707601e-09 saved
+    18        1 reference                 3  1.6832583020794581e-09  2.0615619668643841e-09 saved
+    19        1 reference               All  2.0347124540982269e-09  2.4920036358603913e-09 saved
+    19        1 reference                 1  2.0786815546458531e-09  2.5458545661033855e-09 saved
+    19        1 reference                 2  2.2947524475295830e-09  2.8104862832707601e-09 saved
+    19        1 reference                 3  1.6832583020794581e-09  2.0615619668643841e-09 saved

@@ -1,0 +1,26 @@
+# Position comparisons: relative trajectory differences, not exact-solution errors.
+# Reference: Test 1; previous means the preceding executed run (reference first, then ascending dt).
+# Common time interval: [0, 6.5]; uniform samples: 10001 (including endpoints).
+# Length scale: 0.8164965832386197; unweighted initial RMS radius about the mass-weighted center of mass of the reference test.
+# Alignment: cubic Hermite interpolation using saved positions and velocities; exact saved nodes retained.
+# Metric: sqrt(mean over stars and uniform time samples of squared 3D position distance); endpoints included.
+# Per-star values and full settings are stored in the companion batch JSON.
+
+
+  Test  Against Kind                   Star                    RMSE                   NRMSE Status
+     2        1 reference               All  1.8251685249829670e-13  2.2353657840715845e-13 saved
+     2        1 reference                 1  1.8913915324611085e-13  2.3164720726190137e-13 saved
+     2        1 reference                 2  2.1235088547081360e-13  2.6007565717976116e-13 saved
+     2        1 reference                 3  1.3809665631998678e-13  1.6913317110554065e-13 saved
+     3        1 reference               All  3.1164521128415748e-12  3.8168587313375166e-12 saved
+     3        1 reference                 1  3.1849295555573176e-12  3.9007261278722674e-12 saved
+     3        1 reference                 2  3.5412440506065765e-12  4.3371204770512236e-12 saved
+     3        1 reference                 3  2.5402038530568967e-12  3.1111016325153762e-12 saved
+     4        1 reference               All  3.0768063323735280e-06  3.7683027651743848e-06 saved
+     4        1 reference                 1  3.2030868275320926e-06  3.9229641535388962e-06 saved
+     4        1 reference                 2  3.7124538110358421e-06  4.5468087524756783e-06 saved
+     4        1 reference                 3  2.0876142117300557e-06  2.5567947920241989e-06 saved
+     5        1 reference               All  1.2362801868389339e-10  1.5141278141486517e-10 saved
+     5        1 reference                 1  1.2645094929364342e-10  1.5487015119166560e-10 saved
+     5        1 reference                 2  1.3992965349024728e-10  1.7137812498273868e-10 saved
+     5        1 reference                 3  1.0139778354555348e-10  1.2418641501641182e-10 saved

@@ -1,0 +1,31 @@
+36-44 dt scan of KDK butterfly I
+
+49-50 method scan butterfly I
+
+53-60 adeptive method scan KDK butterfly I
+
+67-68 Theoretical same cost accurency compare
+
+[2026-10-07 local CPU test suite]
+
+77-81 Figure-8 reference validation, T=6.5
+    RK4 reference dt=0.00025; RK4 checks dt=0.0005 and 0.001; KDK dt=0.001; RK4 dt=0.0025.
+    Result: RK4 dt=0.0005 vs 0.00025 position RMSE=1.825e-13; KDK dt=0.001=3.077e-06; RK4 dt=0.0025=1.236e-10.
+
+82-100 Figure-8 cost versus accuracy, three timing repeats
+    RK4 reference dt=0.00025; KDK dt=0.002,0.001,0.0005; RK4 dt=0.005,0.0025,0.00125; each tested dt repeated three times.
+    Result: paired RK4 runs have smaller position RMSE at slightly lower median CPU time across all three tested cost levels. Three repeats per dt; detailed timing table in results.md.
+
+101-104 Figure-8 long-time test T=65
+    RK4 reference dt=0.0005; RK4 reference check dt=0.001; compare KDK dt=0.001 and RK4 dt=0.0025 at the same final time.
+    Result: Reference check RK4 dt=0.001: position RMSE=2.658e-11, final dE=-2.336e-13; KDK dt=0.001: position RMSE=1.557e-05, final dE=-5.317e-07; RK4 dt=0.0025: position RMSE=1.438e-09, final dE=-3.047e-11.
+
+105-108 Figure-8 long-time test T=650
+    RK4 reference dt=0.0005; RK4 reference check dt=0.001; compare KDK dt=0.001 and RK4 dt=0.0025 at the same final time.
+    Result: Reference check RK4 dt=0.001: position RMSE=7.310e-10, final dE=-3.301e-12; KDK dt=0.001: position RMSE=1.533e-04, final dE=-7.568e-07; RK4 dt=0.0025: position RMSE=6.214e-08, final dE=-3.320e-10.
+
+109-121 Butterfly I fixed and adaptive cost versus accuracy
+    h=7.793343548875e-5, T=6.2346748391; RK4 reference h/20, check h/10; fixed KDK/RK4 h,h/2,h/4; KDK timescale eta=0.03,0.01; KDK ratio (N,K)=(2,7),(3,4),(5,3).
+    Result: reference-check position difference=1.747e-09; smallest tested non-reference position RMSE: RK4 fixed h/4 (1.682e-07, 45.80s). Compare efficiency using the full cost/error table, not error alone.
+
+Detailed results and plots: reports/2026-10-07/results.md

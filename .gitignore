@@ -216,3 +216,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local simulation outputs and full trajectory arrays
+graph and data/
+*.npz
+*.npy
+*.gif
+*.mp4
+Codex/
+# Published lightweight snapshots live in data/run-history/.

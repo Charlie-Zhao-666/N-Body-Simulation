@@ -1,0 +1,29 @@
+{
+  "numerical_algorithms_unchanged": true,
+  "cpu_gpu_smoke": [
+    {
+      "method": "1",
+      "steps": 10,
+      "max_position_difference": 0.0,
+      "gpu": "NVIDIA GeForce RTX 5090"
+    },
+    {
+      "method": "2",
+      "steps": 10,
+      "max_position_difference": 0.0,
+      "gpu": "NVIDIA GeForce RTX 5090"
+    }
+  ],
+  "gui_reference_marker": true,
+  "plans_load": true,
+  "run_data_numeric_cells_unchanged": true,
+  "portable_links": true,
+  "png_count": 101,
+  "source_sha256": "d0da6878a38b76c18261291baed7bd86aafce657369c0357f2580ffb54b74022",
+  "publication_only_changes": [
+    "English entry filename",
+    "Portable manual image-export directory",
+    "Trailing whitespace cleanup"
+  ],
+  "hash_definition": "SHA256 of published UTF-8 source bytes with LF line endings"
+}

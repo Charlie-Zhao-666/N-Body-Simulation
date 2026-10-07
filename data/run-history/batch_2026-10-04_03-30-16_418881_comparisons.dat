@@ -1,0 +1,18 @@
+# Position comparisons: relative trajectory differences, not exact-solution errors.
+# Reference: Test 1; previous means the preceding run after sorting by configured dt.
+# Common time interval: [0, 6.2346748391]; uniform samples: 1001 (including endpoints).
+# Length scale: 0.816496580927726; unweighted initial RMS radius about the mass-weighted center of mass of the reference test.
+# Alignment: cubic Hermite interpolation using saved positions and velocities; exact saved nodes retained.
+# Metric: sqrt(mean over stars and uniform time samples of squared 3D position distance); endpoints included.
+# Per-star values and full settings are stored in the companion batch JSON.
+
+
+  Test  Against Kind                   Star                    RMSE                   NRMSE Status
+     2        1 reference               All                      NA                      NA pending
+     3        1 reference               All                      NA                      NA pending
+     4        1 reference               All                      NA                      NA pending
+     5        1 reference               All                      NA                      NA pending
+     6        1 reference               All                      NA                      NA pending
+     7        1 reference               All                      NA                      NA pending
+     8        1 reference               All                      NA                      NA pending
+     9        1 reference               All                      NA                      NA pending

@@ -1,179 +1,141 @@
-# N-Body-Simulation
+# Interactive N-Body Lab
 
-A 3D Newtonian-gravity N-body simulation in Python, developed step by
-step as an ongoing learning and research project. The current version
-integrates orbits with the leapfrog (kick-drift-kick) scheme or with
-4th-order Runge-Kutta (selected at runtime) and quantifies how well
-the conserved quantities (total energy, total momentum, total angular
-momentum, center-of-mass motion) are preserved by the integration.
+**A Python laboratory for Newtonian N-body dynamics, numerical-error analysis, adaptive time stepping, and CPU/CUDA comparisons.**
 
-Sister project: [Neutron-Star-Modeling](https://github.com/Charlie-Zhao-666/Neutron-Star-Modeling)
+This is the current iteration of **N-Body-Simulation**. The main application is [`interactive_nbody_lab.py`](interactive_nbody_lab.py). The publication keeps the numerical algorithms unchanged and makes the image-export default point to the local output folder. It brings the original model, conservation diagnostics, acceleration tracking, adaptive steps, optional GPU computation, and repeatable batch experiments into one desktop interface.
 
-## What the main program does
+This is an educational and computational-research project under active development. Implemented features and tested cases are listed separately from future work; a numerically computed reference trajectory is not an exact analytic answer.
 
-- Pairwise Newtonian gravity in 3D (computational units with G = 1,
-  equal particle masses m = 1 by default).
-- Leapfrog (kick-drift-kick) or 4th-order Runge-Kutta time
-  integration, selected at runtime.
-- Three initial-condition modes, selected by number at runtime:
-  1. Random seed (a new seed is generated each run),
-  2. Imported seed (reproduce a previous run exactly),
-  3. Known stable periodic solutions (exact initial conditions, loaded
-     from `stable_orbits.py`): the figure-8 three-body choreography
-     (Chenciner-Montgomery), the Lagrange equilateral-triangle
-     circular orbit, a circular two-body orbit, an elliptic two-body
-     orbit (e = 0.5), plus nine periodic three-body orbits discovered
-     by Suvakov & Dmitrasinovic (2013): butterfly I-III, moth I-III,
-     goggles, dragonfly and yin-yang I. Each option sets N and a
-     suggested dt / step count of about one period.
-- Adjustable time step and number of integration steps.
-- Conservation diagnostics after the run: RMSE of total energy, total
-  momentum, total angular momentum and center-of-mass velocity relative
-  to their initial values, plus a normalized energy RMSE. For runs
-  longer than 1000 steps the diagnostics sampling rate is selectable
-  (every 10 steps / 1% / 0.1% / 0.01% of total steps).
-- Interactive 3D orbit animation with a draggable time slider, and a
-  diagnostic figure (energy, momentum, angular momentum, CoM velocity
-  versus time) with mouse-hover value readout. Both figures state the
-  seed, dt and method used. For the known stable solutions the
-  animation view is sized automatically from the actual trajectory
-  extent (same factor-2 rule as the random-mode view), so orbits of
-  scale ~1 are no longer rendered as a point in a +/-100 box.
-- After the plot windows close, results can be saved on request: the
-  animation as a gif (capped at 2000 frames, longer runs are
-  sub-sampled) and/or the diagnostic figure as a png, named
-  `seed_<seed>_method_<method>_dt_<dt>_time_<steps>` next to the
-  script.
+Sister project: [Neutron-Star-Modeling](https://github.com/Charlie-Zhao-666/Neutron-Star-Modeling).
 
-## Repository contents
+## Current capabilities
 
-| File / branch | Description |
+| Area | Implemented functionality | Validation / scope |
+|---|---|---|
+| Physical model | Direct pairwise Newtonian gravity in 3D; positions, velocities, and masses; computational units with G=1 | Finite-precision point masses; no softening, collisions, or merger prescription |
+| Integration | Leapfrog kick-drift-kick (KDK) and classical fourth-order Runge-Kutta (RK4) | Both exercised in step scans and Figure-8 / Butterfly I comparisons |
+| Initial conditions | Random seed, specified seed, and 14 catalog initial-condition options | Published numerical initial conditions have finite precision; some classical cases have analytic orbits, but the catalog is not a set of analytic position functions |
+| Error analysis | Energy, momentum, angular momentum and center-of-mass velocity; RMSE and normalized energy RMSE | Conservation error alone does not certify trajectory accuracy |
+| Position comparisons | Reference-based position RMSE/NRMSE; optional comparison with the previous executed test | Identical initial masses/positions/velocities/order; common physical-time grid with cubic Hermite interpolation |
+| Acceleration and motion | Per-particle net acceleration and velocity records; select any star; distance traveled during the recorded step | Acceleration and energy views share an actual-dt overlay; energy can be displayed as E or E-E(0) |
+| Adaptive steps | Pairwise timescale controller with eta; acceleration-ratio controller with adjustable N and exponent cap K | Both implemented and compared on Butterfly I; adaptive stepping does not automatically preserve fixed-step leapfrog's geometric properties |
+| CPU / GPU | NumPy/Python CPU path and optional CuPy RawKernel CUDA path, float64 | GPU backend implemented; a 5-body/10-step CPU-GPU smoke check passed on RTX 5090 for both integrators; systematic crossover and numerical-equivalence studies remain **planned** |
+| Desktop interaction | Tkinter/Matplotlib interface, draggable timeline and time cursor, hover readout, star selection, fixed/follow/fit-all camera views | Rendering remains CPU-based; GPU computation does not imply GPU-accelerated plotting |
+| Batch testing | Editable Test mode, JSON plans, reference-first execution, automatic run saving | Smallest dt is the default reference; an explicitly selected reference always runs first |
+| Records and export | Aligned DAT history, JSON summaries, PNG conservation plots, full NPZ batch arrays, optional animation export | Local runs are written beside the script; large raw arrays are excluded from this Git repository |
+
+## Quick start
+
+Install Python with Tk support, then install the CPU requirements and launch the interface:
+
+```sh
+python -m pip install -r requirements.txt
+python interactive_nbody_lab.py
+```
+
+`stable_orbits.py` must remain beside the application. Tkinter ships with the standard Windows Python installer; other operating systems may require their distribution's Tk package. This release was tested locally with Python 3.14, NumPy 2.4.3, Matplotlib 3.10.8, Pillow 12.1.1, and python-dateutil 2.9.0.post0.
+
+In the main window, choose initial conditions, integrator, **dt**, **total simulated time T**, diagnostics sampling and CPU/GPU. Start the run to compute the trajectory and inspect the resulting tabs. Here **T is physical simulation time in code units**, not a step count. `Steps_set=ceil(T/dt)`; adaptive runs can execute more steps.
+
+For GPU mode, install a CuPy package compatible with your NVIDIA driver/CUDA environment using the [official CuPy installation guide](https://docs.cupy.dev/en/stable/install.html). The author's environment has `cupy-cuda13x 14.2.0`; that is not a requirement for every machine. CPU mode does not require CuPy.
+
+### Repeatable batch experiments
+
+Open **Test mode**, use **Load plan**, and select a JSON file from [`plans/`](plans/). Each plan contains initial conditions, dt, integrator, total duration, diagnostics settings and position-comparison settings. Start the batch to run the cases sequentially.
+
+- The reference runs first, even if a different case has a shorter dt.
+- Other cases run in ascending configured dt order.
+- Each completed test saves its parameters, diagnostics, conservation figure and full per-step arrays.
+- Position errors are evaluated at shared physical times; comparing equal array indices would be incorrect when time steps differ.
+- `reference_N` in the history denotes a reference shared by N completed comparisons. Unrequested/unavailable metrics are `NA`.
+- Large plans can use substantial time and RAM because the current application retains every step. The long-time and Butterfly plans should be run deliberately.
+
+## Published experiments and results
+
+Browse the [run history and clickable images](data/run-history/README.md), the [full aligned runs.dat](data/run-history/runs.dat), and the [test log](docs/test_report.txt).
+
+The 2026-10-07 suite completed **45 runs on an Intel Core i9-13900K CPU**, with full local trajectory archives. These are **CPU results**, not evidence of GPU speedup.
+
+| Lines in runs.dat | Experiment | Cases |
+|---|---|---:|
+| 77-81 | Figure-8 numerical-reference validation, T=6.5 | 5 |
+| 82-100 | Figure-8 cost/accuracy scans, three repeats per tested method/dt | 19 |
+| 101-104 | Figure-8 long-time comparison, T=65 | 4 |
+| 105-108 | Figure-8 long-time comparison, T=650 | 4 |
+| 109-121 | Butterfly I fixed steps, timescale adaptation and acceleration-ratio adaptation | 13 |
+
+[Full results, settings, limitations and six comparison plots](docs/reports/2026-10-07/results.md).
+
+![Figure-8 CPU cost versus numerical-reference error](docs/reports/2026-10-07/figure8_cost_accuracy.png)
+
+Within these Figure-8 tests, RK4 produces smaller position differences at similar or slightly lower measured CPU cost than the paired KDK cases, including at T=650. On Butterfly I, the tested fixed RK4 h/4 case is both faster and more accurate in position than the three tested acceleration-ratio settings. These are findings for the tested initial conditions, durations, implementations and references, not a universal ranking of integrators.
+
+Energy figures distinguish bounded oscillations from drift. KDK can preserve angular momentum more accurately while having a larger position error. The detailed comparison additionally resamples recorded energy onto common physical times, because native diagnostic sampling differs between adaptive modes.
+
+## Repository layout and version strategy
+
+| Path | Purpose |
 |---|---|
-| `N body simulation.py` | Main simulation, latest version. Latest update: the integrator is selectable at runtime (leapfrog KDK or RK4), the diagnostics sampling rate is selectable for long runs, both figures state seed / dt / method, and results can be saved after the run (gif / png, named by seed, method, dt and step count). Earlier history: the first upload introduced leapfrog integration with RMSE error analysis; the second added random / imported seed control and interactive parameters; the third turned the placeholder "Known seeds" option into four exact stable periodic solutions; the fourth grew the stable-solution menu from 4 to 13 entries and moved all orbit data into `stable_orbits.py`. |
-| `stable_orbits.py` | Data module with the initial conditions of the known stable / periodic solutions, imported by the main program (must sit in the same folder). Each entry carries N, a recommended dt and step count (exactly one period for the three-body choreographies), zero-momentum initial positions and velocities, the period, a literature source, and an optional warning note. |
-| `Galaxies collision simulation.py` | Galaxy-collision demo, version 1 of the galaxy-collision track, kept as a separate file parallel to the programs above (not an update of any of them). Two identical galaxies - each a central AGN of mass 5.5e6 plus a 24-star disk (star masses 1-10, orbital radii 2-25, initially circular Keplerian speeds around its own center) - start 60 length units apart and drift toward each other with small transverse kicks, the disk stars sharing 1.2x their center's drift velocity. Same pairwise leapfrog scheme as the main program (G = 1e-11, dt = 100, 1000 steps), animated in 3D with matplotlib (gray trails and blue points for disk stars, red/orange curves for the two AGNs, fixed +/-60 view box). No conservation diagnostics - it is a visual demo. Needs only numpy and matplotlib. |
-| branch [`time-step-tester`](https://github.com/Charlie-Zhao-666/N-Body-Simulation/tree/time-step-tester) | Time-step scan tool, moved off main onto its own branch. Sweeps a list of time steps (each run covers the same 1000 time units) with either leapfrog or RK4 and plots energy RMSE and normalized energy RMSE vs dt on log-log scales, with selectable diagnostics sampling and optional figure saving. The branch README documents the scan results and what they imply for choosing dt and method. The leapfrog-only version is preserved in the branch history. |
-| branch [`method-tester`](https://github.com/Charlie-Zhao-666/N-Body-Simulation/tree/method-tester) | `Method_tester.py`: runs one set of initial conditions through leapfrog and RK4 back to back (same dt and step count, state reset between runs) and produces the full conservation report and dashboard for each, saved automatically as png. Quantifies how much each method actually conserves on identical setups. |
-| branch [`no-z-component-test`](https://github.com/Charlie-Zhao-666/N-Body-Simulation/tree/no-z-component-test) | `no_z_component_test.py`: verifies that planar initial conditions (like the figure-8 and the other planar stable solutions) stay exactly in their initial plane under the 3D integrator - z, vz and az tracked every step, all exactly zero in the reference run. |
-| branch [`images`](https://github.com/Charlie-Zhao-666/N-Body-Simulation/tree/images) | Result figures (dt scans and method-comparison dashboards), referenced by the branch READMEs. |
-| `.gitignore` | Standard Python ignore rules. |
-| `README.md` | This file. |
+| `interactive_nbody_lab.py` | Current interactive application; published under an English filename |
+| `stable_orbits.py` | Initial-condition catalog shared with the original program |
+| `N body simulation.py` | Original console-driven program, retained for continuity |
+| `Galaxies collision simulation.py` | Earlier separate galaxy-collision visualization demo |
+| `requirements.txt` | CPU application dependencies |
+| `plans/` | Loadable configurations for the published 45-run suite |
+| `data/run-history/` | Lightweight published snapshot: tables, full-precision summaries, comparisons and 101 PNGs |
+| `docs/test_report.txt` | Test descriptions and runs.dat line ranges |
+| `docs/reports/2026-10-07/` | Detailed analysis, machine-readable metrics and summary figures |
+| `docs/cpu_gpu_benchmark_plan.md` | Planned particle-count sweep and crossover protocol |
+| `docs/ROADMAP.md` | Completed, unfinished and proposed work |
 
-## Completed work so far
+The interactive application belongs to the existing **main development line**, rather than a separate repository. Earlier versions remain available in Git history. The existing `time-step-tester`, `method-tester`, `no-z-component-test`, and `images` branches remain as historical/specialized work; their READMEs describe those versions, not the current interface. Future unvalidated changes can use short-lived feature branches before joining main.
 
-- 3D pairwise Newtonian gravity with leapfrog integration, plus a
-  selectable 4th-order Runge-Kutta integrator (main program and both
-  test tools).
-- Conservation diagnostics (energy, momentum, angular momentum,
-  center-of-mass motion) with RMSE-based error quantification and a
-  normalized energy error.
-- Reproducible random initial conditions via seeds, with interesting
-  seeds recorded for reuse.
-- Thirteen exact periodic reference solutions in the seed menu: four
-  classical ones plus nine Suvakov-Dmitrasinovic orbits. The classical
-  four are unchanged - smoke tests over about one period (dt = 0.001)
-  give normalized energy RMSE of 1.1e-07 (figure-8), 4.6e-13
-  (Lagrange circle), 2.0e-13 (circular binary) and 7.4e-07 (elliptic
-  binary). Each of the nine new orbits was verified with the program's
-  own leapfrog scheme: integrating one full period with its
-  recommended step count (80k-640k steps), the trajectory returns to
-  its starting point with a drift below 8e-3 (best 2e-4 for moth I).
-  Butterfly II is included with its published 5-digit initial
-  velocities, so a slightly larger deviation is expected and is
-  flagged in its menu note.
-- Honest limit of the current integrator: not every published periodic
-  orbit can be reproduced in double-precision leapfrog. The bumblebee,
-  butterfly IV, yarn and yin-yang II orbits are linearly unstable, and
-  in verification runs their end-of-period drift stayed of order
-  1-1000 even at 640k steps. They are documented in `stable_orbits.py`
-  but intentionally not offered in the menu until a higher-order or
-  high-precision integrator is available.
-- Time-step scan tooling for both integrators, and a controlled
-  leapfrog-vs-RK4 comparison tool. The scans (documented on the
-  `time-step-tester` branch) show that accuracy does not scale with
-  dt forever in either direction: leapfrog follows ~dt^2 only until
-  chaotic close encounters saturate the error, and RK4 hits a
-  round-off floor below dt ~ 4e-3 - so there is a most cost-effective
-  dt window rather than "smaller is always better". A documented case
-  (seed 221024875, N = 5, 1000 time units): normalized energy RMSE is
-  4.3e-04 at dt = 0.01 but 2.84 at dt = 0.1 and 1.60 at dt = 1.
-- 3D orbit animation with a playback slider and automatic view sizing
-  for stable solutions; diagnostic plots with hover readout; optional
-  gif / png result saving named by seed, method, dt and step count.
-- Galaxy-collision demo, first version: two AGN-centered 24-star disks
-  set on a collision course, integrated with the same leapfrog scheme
-  and animated in 3D with matplotlib.
-- Planarity check: planar initial conditions stay exactly in their
-  initial plane under the 3D integrator (no-z-component-test branch).
+For the original console program, `mplcursors` may also be needed; install it separately if you run that legacy entry point.
 
-## Planned / future work
+### Published data versus local outputs
 
-- Higher-order / high-precision integration beyond RK4, to make the
-  four linearly unstable Suvakov-Dmitrasinovic orbits (bumblebee,
-  butterfly IV, yarn, yin-yang II) reproducible and complete the menu.
-- Regime-adaptive integration, guided by the dt-scan results: cheap
-  leapfrog for the large-scale evolution, a higher-order method with a
-  smaller dt during close encounters (see the strategy discussion on
-  the `time-step-tester` branch).
-- Gravitational softening; special handling of close encounters.
-- Saving / loading initial conditions and a library of recorded seeds.
-- More benchmark and convergence studies using the periodic reference
-  solutions.
-- GPU acceleration (an early CuPy prototype exists locally).
-- Galaxy track: conservation diagnostics for the galaxy-collision runs,
-  more realistic collision setups (inclined / parabolic encounters,
-  tidal tails), and a single-galaxy vispy demo (a local draft exists).
-- Result images / animations and a written project report.
+The current published snapshot contains 103 run records and 101 conservation PNGs (about 12.8 MiB of PNGs); two legacy records lack images. Date/time names match the corresponding table rows. The `Plot` field uses relative filenames, and the Markdown gallery provides links usable directly on GitHub.
 
-## How to run
+The approximately **12.2 GiB of local NPZ trajectories are not uploaded**. Historical batch JSON files retain their NPZ output names as provenance, but the raw arrays are not included. New local runs create a separate `graph and data/` folder beside the program, ignored by Git. `data/run-history/` is a published snapshot and is not overwritten by running the application. Keep full arrays locally or use a dedicated data archive for future releases. GitHub recommends keeping repositories small and blocks ordinary Git files above 100 MiB; see [GitHub's large-file guidance](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github).
 
-```
-pip install numpy matplotlib mplcursors
-python "N body simulation.py"
+A publication smoke check used the same five-body initial state and 10 fixed steps on the CPU and an NVIDIA GeForce RTX 5090 for both integrators; saved positions agreed at the tested precision. This only checks a short execution path, not general trajectory equivalence or performance. [Check record](docs/reports/publication_checks.json).
+
+## Next research question: where does GPU computation become worthwhile?
+
+For each particle count, generate initial conditions once and give identical copies to CPU and GPU. Hold the integrator, precision, dt, total steps and recording policy fixed. Start with N=3,5,10,20,50,100 and extend until a sustained crossover is observed; refine the interval around that crossing. Repeat with several fixed seeds, warm up GPU execution, synchronize timing, and compare numerical results as well as speed.
+
+Report both the application-level cost (including per-step recording/transfers) and a separately instrumented compute-only cost. The current GPU path transfers complete snapshots each step, and the CPU baseline uses Python pair loops, so a crossover measures **these implementations on the tested hardware**, not an intrinsic CPU/GPU boundary. Changing N also changes the physical initial system; the purpose of this sweep is performance, not physical convergence.
+
+The detailed [benchmark plan](docs/cpu_gpu_benchmark_plan.md) explains the controls, timing boundaries, error checks and stop/refinement rules. No crossover measurement is claimed yet.
+
+## Remaining work
+
+- Systematic CPU/GPU performance and numerical-consistency validation.
+- Lower-overhead GPU execution and reduced host/device transfers; more efficient CPU implementation.
+- Chunked/on-disk trajectory recording to bound memory usage; safer long-run restart/resume.
+- Broader reference convergence, analytic two-body benchmarks, long-time and close-encounter tests.
+- Controlled experiments with gravitational softening or regularization; document any physical model change.
+- Higher-order or alternative integrators beyond classical RK4; assess any method-switching scheme before adoption.
+- A formal project report with reproducible figures and a wider suite of initial conditions.
+- Dark-matter halo models and a physically specified galaxy-merger study; these are not part of the current point-mass validation suite.
+
+See the [roadmap](docs/ROADMAP.md) for priorities and completion criteria.
+
+## Model and interpretation notes
+
+The simulation advances particle positions and velocities under their mutual gravity. For the current position-dependent force law, leapfrog uses an intermediate velocity for its position update; RK4 uses multiple predicted states and a weighted final update. Updated positions determine the next force evaluation. All recorded numerical values use code units with no automatic SI conversion.
+
+```mermaid
+flowchart TD
+    A["Initial masses, positions and velocities; G=1; isolated system"] --> B["Evaluate mutual gravity and net accelerations"]
+    B --> C["Choose fixed dt or adaptive dt from current state/controller history"]
+    C --> D["KDK: half kick, full drift, recompute gravity, half kick; or RK4 predicted stages and weighted update"]
+    D --> E["New positions/velocities; record final acceleration, energy and actual time"]
+    E --> F{"Reached total simulated time T?"}
+    F -- No --> B
+    F -- Yes --> G["Diagnostics, reference comparisons, plots and archive"]
 ```
 
-Follow the on-screen menus to choose the seed mode, the time step, the
-number of steps and the integrator. Keep `stable_orbits.py` in the same
-folder as the main program - the "Known seeds" menu imports it. (The
-current version imports `mplcursors`; the hover readout itself is
-implemented with matplotlib events.)
-`Galaxies collision simulation.py` needs only numpy and matplotlib.
-The tools on the `time-step-tester` and `method-tester` branches also
-need mplcursors, and `Method_tester.py` imports `stable_orbits.py`.
+No gravitational softening or exact-collision handling is currently applied. Very close encounters can require much smaller steps or produce invalid states. Published periodic initial conditions are finite-precision numerical data; not every three-body solution has an analytic time-to-position formula, and a visually closed orbit is not proof of numerical accuracy.
 
-## Units and conventions
-
-The simulation uses dimensionless computational units with G = 1 and
-equal masses m = 1. The parameter called "total time" in the current
-interface is the number of integration steps, so the physical simulated
-time is steps x dt. (`Galaxies collision simulation.py` uses G = 1e-11
-and unequal masses - see its header.)
-
-## Known issues and notes
-
-- "total time" is a step count, not a physical time (naming to be
-  unified in a future cleanup).
-- On the `time-step-tester` branch, the tester's seed menu option 3 is
-  still a placeholder (use 1 or 2); the smallest dt values in its
-  default list imply up to 10M steps per run, so a full sweep is a
-  long run (the coarse sampling options exist for exactly this case).
-- Two menu orbits (moth III, dragonfly) need 640k steps for a clean
-  closed loop; their integrations take a few minutes and print progress
-  every 10 steps.
-- Verification so far is based on conservation diagnostics, periodic
-  reference solutions and dt scans of both integrators; systematic
-  benchmark studies are part of the planned work.
-
-## References
-
-- C. Moore, Phys. Rev. Lett. 70, 3675 (1993) - the figure-8 braid.
-- A. Chenciner & R. Montgomery, Ann. of Math. 152, 881 (2000) -
-  existence proof of the figure-8 solution.
-- M. Suvakov & V. Dmitrasinovic, Phys. Rev. Lett. 110, 114301 (2013),
-  arXiv:1303.0181 - 13 new families of periodic three-body orbits;
-  butterfly II initial velocities are taken from its Table I.
-- X. Li & S. Liao, Sci. China Phys. Mech. Astron. 60, 129511 (2017) -
-  SJTU catalogue of 695 periodic three-body orbits; source of the
-  high-precision initial velocities and periods for the other eight
-  Suvakov-Dmitrasinovic orbits (catalogue IDs appear in the menu
-  names).
+Orbit provenance and literature URLs are retained in `stable_orbits.py` and the interactive catalog, including Figure-8, classical two-body/Lagrange cases, Suvakov-Dmitrasinovic periodic initial conditions and the Li-Liao free-fall example. There is no claim that the whole catalog has undergone the same validation as the two cases tested here.
