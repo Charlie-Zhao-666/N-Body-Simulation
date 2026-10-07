@@ -10,6 +10,7 @@
 - [x] Optional CuPy/CUDA computation using float64.
 - [x] Batch plans, selectable numerical reference, position RMSE/NRMSE and optional previous-run comparisons.
 - [x] Automatic local data/figure saving and lightweight published results.
+- [x] Original Butterfly I step, method, adaptive and proposed cost-matching experiments; four main and two supplementary [importable historical plans](../plans/historical/README.md).
 - [x] Figure-8 reference/cost/long-time studies and Butterfly I fixed/adaptive comparisons (45 additional CPU runs).
 
 ## Next: validation and performance

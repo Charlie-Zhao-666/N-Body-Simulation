@@ -8,21 +8,19 @@ This is an educational and computational-research project under active developme
 
 Sister project: [Neutron-Star-Modeling](https://github.com/Charlie-Zhao-666/Neutron-Star-Modeling).
 
-## Current capabilities
+## Completed features and engineering
 
-| Area | Implemented functionality | Validation / scope |
-|---|---|---|
-| Physical model | Direct pairwise Newtonian gravity in 3D; positions, velocities, and masses; computational units with G=1 | Finite-precision point masses; no softening, collisions, or merger prescription |
-| Integration | Leapfrog kick-drift-kick (KDK) and classical fourth-order Runge-Kutta (RK4) | Both exercised in step scans and Figure-8 / Butterfly I comparisons |
-| Initial conditions | Random seed, specified seed, and 14 catalog initial-condition options | Published numerical initial conditions have finite precision; some classical cases have analytic orbits, but the catalog is not a set of analytic position functions |
-| Error analysis | Energy, momentum, angular momentum and center-of-mass velocity; RMSE and normalized energy RMSE | Conservation error alone does not certify trajectory accuracy |
-| Position comparisons | Reference-based position RMSE/NRMSE; optional comparison with the previous executed test | Identical initial masses/positions/velocities/order; common physical-time grid with cubic Hermite interpolation |
-| Acceleration and motion | Per-particle net acceleration and velocity records; select any star; distance traveled during the recorded step | Acceleration and energy views share an actual-dt overlay; energy can be displayed as E or E-E(0) |
-| Adaptive steps | Pairwise timescale controller with eta; acceleration-ratio controller with adjustable N and exponent cap K | Both implemented and compared on Butterfly I; adaptive stepping does not automatically preserve fixed-step leapfrog's geometric properties |
-| CPU / GPU | NumPy/Python CPU path and optional CuPy RawKernel CUDA path, float64 | GPU backend implemented; a 5-body/10-step CPU-GPU smoke check passed on RTX 5090 for both integrators; systematic crossover and numerical-equivalence studies remain **planned** |
-| Desktop interaction | Tkinter/Matplotlib interface, draggable timeline and time cursor, hover readout, star selection, fixed/follow/fit-all camera views | Rendering remains CPU-based; GPU computation does not imply GPU-accelerated plotting |
-| Batch testing | Editable Test mode, JSON plans, reference-first execution, automatic run saving | Smallest dt is the default reference; an explicitly selected reference always runs first |
-| Records and export | Aligned DAT history, JSON summaries, PNG conservation plots, full NPZ batch arrays, optional animation export | Local runs are written beside the script; large raw arrays are excluded from this Git repository |
+- **Physical model:** Direct pairwise Newtonian gravity in 3D; positions, velocities, and masses; computational units with G=1. Finite-precision point masses; no softening, collisions, or merger prescription.
+- **Integration:** Leapfrog kick-drift-kick (KDK) and classical fourth-order Runge-Kutta (RK4). Both exercised in step scans and Figure-8 / Butterfly I comparisons.
+- **Initial conditions:** Random seed, specified seed, and 14 catalog initial-condition options. Published numerical initial conditions have finite precision; some classical cases have analytic orbits, but the catalog is not a set of analytic position functions.
+- **Error analysis:** Energy, momentum, angular momentum and center-of-mass velocity; RMSE and normalized energy RMSE. Conservation error alone does not certify trajectory accuracy.
+- **Position comparisons:** Reference-based position RMSE/NRMSE; optional comparison with the previous executed test. Identical initial masses/positions/velocities/order; common physical-time grid with cubic Hermite interpolation.
+- **Acceleration and motion:** Per-particle net acceleration and velocity records; select any star; distance traveled during the recorded step. Acceleration and energy views share an actual-dt overlay; energy can be displayed as E or E-E(0).
+- **Adaptive steps:** Pairwise timescale controller with eta; acceleration-ratio controller with adjustable N and exponent cap K. Both implemented and compared on Butterfly I; adaptive stepping does not automatically preserve fixed-step leapfrog's geometric properties.
+- **CPU / GPU:** NumPy/Python CPU path and optional CuPy RawKernel CUDA path, float64. GPU backend implemented; a 5-body/10-step CPU-GPU smoke check passed on RTX 5090 for both integrators; systematic crossover and numerical-equivalence studies remain **planned**.
+- **Desktop interaction:** Tkinter/Matplotlib interface, draggable timeline and time cursor, hover readout, star selection, fixed/follow/fit-all camera views. Rendering remains CPU-based; GPU computation does not imply GPU-accelerated plotting.
+- **Batch testing:** Editable Test mode, JSON plans, reference-first execution, automatic run saving. Smallest dt is the default reference; an explicitly selected reference always runs first.
+- **Records and export:** Aligned DAT history, JSON summaries, PNG conservation plots, full NPZ batch arrays, optional animation export. Local runs are written beside the script; large raw arrays are excluded from this Git repository.
 
 ## Quick start
 
@@ -56,15 +54,21 @@ Open **Test mode**, use **Load plan**, and select a JSON file from [`plans/`](pl
 
 Browse the [run history and clickable images](data/run-history/README.md), the [full aligned runs.dat](data/run-history/runs.dat), and the [test log](docs/test_report.txt).
 
+The original experiments are also available as [importable historical plans](plans/historical/README.md):
+
+- **Lines 36-44:** Butterfly I KDK time-step scan — 9 runs.
+- **Lines 49-50:** Butterfly I KDK/RK4 comparison at the same dt — 2 runs.
+- **Lines 53-60:** Butterfly I fixed-step reference and adaptive-method comparison — 8 runs.
+- **Lines 67-69:** Butterfly I proposed cost-matched KDK/RK4 comparison — 3 runs; the dt factor does not guarantee equal measured cost.
+- **Lines 61-63 and 64-66:** Two supplementary method/time-step trials — 3 runs each.
+
 The 2026-10-07 suite completed **45 runs on an Intel Core i9-13900K CPU**, with full local trajectory archives. These are **CPU results**, not evidence of GPU speedup.
 
-| Lines in runs.dat | Experiment | Cases |
-|---|---|---:|
-| 77-81 | Figure-8 numerical-reference validation, T=6.5 | 5 |
-| 82-100 | Figure-8 cost/accuracy scans, three repeats per tested method/dt | 19 |
-| 101-104 | Figure-8 long-time comparison, T=65 | 4 |
-| 105-108 | Figure-8 long-time comparison, T=650 | 4 |
-| 109-121 | Butterfly I fixed steps, timescale adaptation and acceleration-ratio adaptation | 13 |
+- **Lines 77-81:** Figure-8 numerical-reference validation, T=6.5 — 5 runs.
+- **Lines 82-100:** Figure-8 cost/accuracy scans, three repeats per tested method/dt — 19 runs.
+- **Lines 101-104:** Figure-8 long-time comparison, T=65 — 4 runs.
+- **Lines 105-108:** Figure-8 long-time comparison, T=650 — 4 runs.
+- **Lines 109-121:** Butterfly I fixed steps, timescale adaptation and acceleration-ratio adaptation — 13 runs.
 
 [Full results, settings, limitations and six comparison plots](docs/reports/2026-10-07/results.md).
 
