@@ -1,0 +1,18 @@
+{
+  "samples": 897,
+  "sampling_seconds": 1.0,
+  "background_cpu_median": 0.8641382621219418,
+  "background_cpu_p95": 2.8367983367983363,
+  "background_cpu_max": 4.242135367016208,
+  "idle_cpu_mean": 1.657745339916038,
+  "idle_gpu_max": 7,
+  "gpu_temperature_range": [
+    54,
+    58
+  ],
+  "formal_samples": 765,
+  "runs_without_within_call_sample": 162,
+  "formal_background_cpu_p95": 2.837577962577966,
+  "formal_background_cpu_max": 4.242135367016208,
+  "caveat": "1 Hz telemetry does not resolve millisecond-scale contention. Windows desktop GPU contexts are resident, not evidence of high compute load. No exclusive access or fixed clocks."
+}

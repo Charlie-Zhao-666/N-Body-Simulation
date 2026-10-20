@@ -1,3 +1,5 @@
+> Status update (2026-10-20): the original dictionary/GPU study and an optimized four-backend retest are complete. See [latest measured results](reports/2026-10-20-backends/README.md) and [historical results](reports/2026-10-07-cpu-gpu/results.md). The text below retains the original proposed protocol; not every proposed extension has been completed.
+
 # Planned CPU/GPU crossover experiment
 
 Status: **planned; not executed in the published 45-run CPU suite**.

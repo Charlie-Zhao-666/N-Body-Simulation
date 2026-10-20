@@ -1,0 +1,44 @@
+[
+  {
+    "method": "1",
+    "cpu_backend": "cpu",
+    "lower_sample": 6,
+    "first_gpu_faster_sample": 10,
+    "first_winner_repeat_ranges_separate": true
+  },
+  {
+    "method": "1",
+    "cpu_backend": "cpu_array",
+    "lower_sample": 300,
+    "first_gpu_faster_sample": 1000,
+    "first_winner_repeat_ranges_separate": true
+  },
+  {
+    "method": "1",
+    "cpu_backend": "cpu_parallel",
+    "lower_sample": 3000,
+    "first_gpu_faster_sample": 10000,
+    "first_winner_repeat_ranges_separate": true
+  },
+  {
+    "method": "2",
+    "cpu_backend": "cpu",
+    "lower_sample": 6,
+    "first_gpu_faster_sample": 10,
+    "first_winner_repeat_ranges_separate": true
+  },
+  {
+    "method": "2",
+    "cpu_backend": "cpu_array",
+    "lower_sample": 300,
+    "first_gpu_faster_sample": 1000,
+    "first_winner_repeat_ranges_separate": true
+  },
+  {
+    "method": "2",
+    "cpu_backend": "cpu_parallel",
+    "lower_sample": 1000,
+    "first_gpu_faster_sample": 3000,
+    "first_winner_repeat_ranges_separate": true
+  }
+]

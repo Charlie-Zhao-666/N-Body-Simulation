@@ -1,0 +1,17 @@
+{
+  "historical_records_preserved": 103,
+  "new_measured_records": 262,
+  "total_records": 365,
+  "history_lines": [
+    122,
+    383
+  ],
+  "device_model_present_every_row": true,
+  "legacy_schema_expansion_idempotent": true,
+  "all_new_png_npz_verified": true,
+  "all_measured_states_advanced": true,
+  "physics_functions_unchanged": true,
+  "source_sha256": "2a07ad1ffbe75f7fd22385d9aca8253e1da22d9610c625688e2c348506910590",
+  "local_cpu": "13th Gen Intel(R) Core(TM) i9-13900K",
+  "local_gpu": "NVIDIA GeForce RTX 5090"
+}

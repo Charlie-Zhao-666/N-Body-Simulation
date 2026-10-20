@@ -1,0 +1,44 @@
+{
+  "status": "passed",
+  "backend": "local dictionary CPU",
+  "checks": [
+    "Old entries unchanged; free-fall menu #16 preserved",
+    "Shared catalog consumers and batch-plan resolution",
+    "Actual app RK4 defaults complete a period",
+    "No catalog mutation, finite trajectories, correct 2D/3D motion"
+  ],
+  "runs": [
+    {
+      "menu": 19,
+      "name": "Rounded triangle four-body orbit (Ouyang-Xie, theta=5*pi/12)",
+      "dt": 0.001,
+      "steps": 24000,
+      "max_body_position_return_distance": 0.0018855663017851064,
+      "compute_seconds": 5.817105399997672
+    },
+    {
+      "menu": 20,
+      "name": "Seven-pointed star four-body choreography (Ouyang-Xie, theta=3*pi/7)",
+      "dt": 0.001,
+      "steps": 56000,
+      "max_body_position_return_distance": 0.008539735858517883,
+      "compute_seconds": 13.541587600004277
+    },
+    {
+      "menu": 21,
+      "name": "Spatial trefoil knot five-body choreography (Calleja et al.; unstable)",
+      "dt": 0.0002677813909139374,
+      "steps": 20000,
+      "max_body_position_return_distance": 4.956114751432384e-08,
+      "compute_seconds": 7.281436500001291
+    },
+    {
+      "menu": 22,
+      "name": "Nonsymmetric six-body choreography (Kapela-Simo; numerically refined)",
+      "dt": 0.0003141592653589793,
+      "steps": 20000,
+      "max_body_position_return_distance": 1.2608070677108904e-05,
+      "compute_seconds": 10.381593300000532
+    }
+  ]
+}

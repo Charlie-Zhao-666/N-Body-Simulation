@@ -1,0 +1,30 @@
+{
+  "trefoil_newton_residual": 4.838527356554323e-10,
+  "runs": [
+    {
+      "name": "Rounded triangle four-body orbit (Ouyang-Xie, theta=5*pi/12)",
+      "period": 24.0,
+      "max_body_position_return_distance": 0.0018855663014089043,
+      "nfev": 15017
+    },
+    {
+      "name": "Seven-pointed star four-body choreography (Ouyang-Xie, theta=3*pi/7)",
+      "period": 56.0,
+      "max_body_position_return_distance": 0.008539735859158699,
+      "nfev": 15017
+    },
+    {
+      "name": "Spatial trefoil knot five-body choreography (Calleja et al.; unstable)",
+      "period": 5.355627818278749,
+      "max_body_position_return_distance": 4.898169375879966e-08,
+      "nfev": 15002,
+      "max_distance_to_fourier_curve": 4.8981693619832313e-08
+    },
+    {
+      "name": "Nonsymmetric six-body choreography (Kapela-Simo; rounded initial data)",
+      "period": 6.283185307179586,
+      "max_body_position_return_distance": 0.07729531420137076,
+      "nfev": 16205
+    }
+  ]
+}

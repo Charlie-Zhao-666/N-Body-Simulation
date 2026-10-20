@@ -2,7 +2,7 @@
 
 **A Python laboratory for Newtonian N-body dynamics, numerical-error analysis, adaptive time stepping, and CPU/CUDA comparisons.**
 
-This is the current iteration of **N-Body-Simulation**. The main application is [`interactive_nbody_lab.py`](interactive_nbody_lab.py). The publication keeps the numerical algorithms unchanged and makes the image-export default point to the local output folder. It brings the original model, conservation diagnostics, acceleration tracking, adaptive steps, optional GPU computation, and repeatable batch experiments into one desktop interface.
+This is the current iteration of **N-Body-Simulation**. The main application is [`interactive_nbody_lab.py`](interactive_nbody_lab.py). The published entry point matches the current local numerical algorithms; its manual image-export default uses the portable local output folder. It brings the original model, conservation diagnostics, acceleration tracking, adaptive steps, optional GPU computation, and repeatable batch experiments into one desktop interface.
 
 I started this personal project because I find N-body dynamics fascinating and enjoy building simulations to explore how these systems behave. It is still under active development. Implemented features and tested cases are listed separately from future work; a numerically computed reference trajectory is not an exact analytic answer.
 
@@ -14,15 +14,19 @@ Listed by development stage, starting with the original model and continuing thr
 
 1. **Build the physical model:** Direct pairwise Newtonian gravity in 3D, with particle masses, positions and velocities, using computational units with G=1 and the original leapfrog update. Finite-precision point masses; no softening, collisions or merger prescription.
 2. **Add energy and conservation-error analysis:** Track energy, momentum, angular momentum and center-of-mass velocity; calculate RMSE and normalized energy RMSE. Conservation error alone does not certify trajectory accuracy.
-3. **Add seed control and known stable initial conditions:** Random and specified seeds, followed by a catalog of known orbit initial conditions, now containing 14 options. Published numerical initial conditions have finite precision; the catalog is not a set of analytic position functions.
+3. **Add seed control and known periodic initial conditions:** Random and specified seeds, followed by a catalog of known orbit initial conditions, now containing 22 options in the interactive application. Published numerical initial conditions have finite precision; the catalog is not a set of analytic position functions.
 4. **Add the KDK / RK4 method choice:** Extend the existing leapfrog kick-drift-kick (KDK) program with classical fourth-order Runge-Kutta (RK4), sampling-rate options and end-of-run saving. Both methods were subsequently exercised in time-step and orbit comparisons.
 5. **Build the interactive acceleration view:** Introduce the Tkinter/Matplotlib interface, per-star net-acceleration records and star selection alongside energy curves. Subsequent interface updates added velocity records, per-step travel distance, a draggable timeline/time cursor, hover readouts, fixed/follow/fit-all views and actual-dt overlays. Energy can be displayed as E or E-E(0).
 6. **Add timescale-based adaptive stepping:** Choose the step from pairwise timescales with an adjustable safety factor eta. Adaptive stepping does not automatically retain the geometric properties of fixed-step leapfrog.
-7. **Add GPU computation:** Introduce an optional CuPy RawKernel CUDA backend alongside the NumPy/Python CPU path, both using float64. Later short 5-body/10-step CPU/GPU checks passed on RTX 5090 for both integrators; systematic crossover and numerical-equivalence studies remain planned. Desktop rendering remains CPU-based.
+7. **Add GPU computation:** Introduce an optional CuPy RawKernel CUDA backend alongside the NumPy/Python CPU path, both using float64. Later validation includes the dictionary/GPU crossover study and a 240-run comparison with compiled single-/multi-thread CPU backends; see the measured results below. Desktop rendering remains CPU-based.
 8. **Add acceleration-ratio adaptive stepping:** Extend the adaptive choices with per-star acceleration monitoring, adjustable trigger ratio N and exponent cap K. Both adaptive approaches were subsequently compared on Butterfly I.
 9. **Expand run recording and export:** Add aligned DAT history, full-precision JSON summaries, linked PNG conservation plots and animation export. Local outputs use the script's graph and data directory; later batch runs also archive full NPZ arrays. Large raw arrays are excluded from Git.
 10. **Add batch Test mode:** Editable test configurations and importable JSON plans, sequential execution and automatic saving. Later reference-ordering refinements make the smallest dt the default reference while honoring an explicitly selected reference, which always runs first.
 11. **Add trajectory-error comparisons:** Reference-based position RMSE/NRMSE and optional comparison with the previous executed test. Comparisons require identical initial masses, positions, velocities and particle order, and use a common physical-time grid with cubic Hermite interpolation.
+
+12. **Add sampled energy-drift fitting:** Fit energy deviation against physical time, record the slope and normalized drift measures, and allow resampling/refitting. A near-zero slope does not by itself prove small excursions or return to the original energy.
+13. **Optimize CPU computation:** Preserve the dictionary CPU baseline and add float64 NumPy-array state with Numba-compiled single-thread and multi-thread loops. Choose the backend and worker count in the interface. The direct-gravity calculation remains O(N^2); these modes reduce interpreter overhead and distribute target-particle work.
+14. **Expand the orbit catalog:** Add spatial and higher-body examples, most recently four-body rounded triangles and a seven-pointed star, a five-body spatial trefoil, and a six-body nonsymmetric choreography. Sources, finite-precision limitations and stability distinctions are documented; not all periodic orbits are stable.
 
 The early milestones are recorded in commits [4893a91](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/4893a91) (original model and conservation analysis), [c9f606c](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/c9f606c) (seed control), [5daddb6](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/5daddb6) (known orbits) and [ee2b2e4](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/ee2b2e4) (RK4 selection). Later interactive development was published together in [18a13f5](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/18a13f5); its stages above follow the development record, not separate per-feature Git timestamps.
 
@@ -35,7 +39,7 @@ python -m pip install -r requirements.txt
 python interactive_nbody_lab.py
 ```
 
-`stable_orbits.py` must remain beside the application. Tkinter ships with the standard Windows Python installer; other operating systems may require their distribution's Tk package. This release was tested locally with Python 3.14, NumPy 2.4.3, Matplotlib 3.10.8, Pillow 12.1.1, and python-dateutil 2.9.0.post0.
+`stable_orbits.py` and `nbody_array_cpu.py` must remain beside the application. For either array CPU mode, also run `python -m pip install -r requirements-array-cpu.txt`; dictionary CPU does not require Numba. The optional dependency was tested with Numba 0.68.0. See [CPU mode details](ARRAY_CPU_README.txt). Tkinter ships with the standard Windows Python installer; other operating systems may require their distribution's Tk package. This release was tested locally with Python 3.14, NumPy 2.4.3, Matplotlib 3.10.8, Pillow 12.1.1, and python-dateutil 2.9.0.post0.
 
 In the main window, choose initial conditions, integrator, **dt**, **total simulated time T**, diagnostics sampling and CPU/GPU. Start the run to compute the trajectory and inspect the resulting tabs. Here **T is physical simulation time in code units**, not a step count. `Steps_set=ceil(T/dt)`; adaptive runs can execute more steps.
 
@@ -87,15 +91,19 @@ Energy figures distinguish bounded oscillations from drift. KDK can preserve ang
 | Path | Purpose |
 |---|---|
 | `interactive_nbody_lab.py` | Current interactive application; published under an English filename |
-| `stable_orbits.py` | Initial-condition catalog shared with the original program |
+| `stable_orbits.py` | Shared initial-condition catalog; 22 interactive choices including the app-specific free-fall entry |
+| `nbody_array_cpu.py` | Optional Numba single-/multi-thread CPU implementation |
+| `requirements-array-cpu.txt` | Optional dependency for array CPU modes |
 | `N body simulation.py` | Original console-driven program, retained for continuity |
 | `Galaxies collision simulation.py` | Earlier separate galaxy-collision visualization demo |
 | `requirements.txt` | CPU application dependencies |
-| `plans/` | Loadable configurations for the published 45-run suite |
+| `plans/` | Loadable historical experiments and the latest four-backend workload |
 | `data/run-history/` | Published snapshot: 388 records, 386 linked lossless WebP plots, full-precision summaries and comparisons |
 | `docs/test_report.txt` | Test descriptions and runs.dat line ranges |
 | `docs/reports/2026-10-07/` | Detailed analysis, machine-readable metrics and summary figures |
-| `docs/cpu_gpu_benchmark_plan.md` | Planned particle-count sweep and crossover protocol |
+| `docs/reports/2026-10-20-backends/` | Latest local CPU/GPU comparison: timings, crossover brackets, figures and source snapshot |
+| `docs/orbits/2026-10-20/` | New orbit previews, provenance and checks |
+| `docs/cpu_gpu_benchmark_plan.md` | Original benchmark protocol and links to completed studies |
 | `docs/ROADMAP.md` | Completed, unfinished and proposed work |
 
 The interactive application belongs to the existing **main development line**, rather than a separate repository. Earlier versions remain available in Git history. The existing `time-step-tester`, `method-tester`, `no-z-component-test`, and `images` branches remain as historical/specialized work; their READMEs describe those versions, not the current interface. Future unvalidated changes can use short-lived feature branches before joining main.
@@ -104,27 +112,47 @@ For the original console program, `mplcursors` may also be needed; install it se
 
 ### Published data versus local outputs
 
-The current published snapshot contains **388 run records and 386 conservation plots**, plus 4 supplementary plots, exported on 2026-10-19. Two legacy records lack images. All run-history plots use lossless WebP. The [complete table](data/run-history/runs.md) and [compact table](data/run-history/README.md) provide clickable relative Plot links; `runs.dat` retains the aligned plain-text data. This is a data-only update: some newer runs used newer local code than the simulation version currently published here.
+The current published snapshot contains **388 run records and 386 conservation plots**, plus 4 supplementary plots, exported on 2026-10-19. Two legacy records lack images. All run-history plots use lossless WebP. The [complete table](data/run-history/runs.md) and [compact table](data/run-history/README.md) provide clickable relative Plot links; `runs.dat` retains the aligned plain-text data. That snapshot is dated 2026-10-19. This 2026-10-20 update adds current application code and separate benchmark evidence; it does not rewrite the historical snapshot. Exact benchmark source is preserved with the new report.
 
 **Full local NPZ trajectories are not uploaded.** Historical batch JSON files retain their NPZ output names as provenance, but the raw arrays are not included. New local runs create a separate `graph and data/` folder beside the program, ignored by Git. `data/run-history/` is a published snapshot and is not overwritten by running the application. Keep full arrays locally or use a dedicated data archive for future releases. GitHub recommends keeping repositories small and blocks ordinary Git files above 100 MiB; see [GitHub's large-file guidance](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github).
 
 A publication smoke check used the same five-body initial state and 10 fixed steps on the CPU and an NVIDIA GeForce RTX 5090 for both integrators; saved positions agreed at the tested precision. This only checks a short execution path, not general trajectory equivalence or performance. [Check record](docs/reports/publication_checks.json).
 
-## Next research question: where does GPU computation become worthwhile?
+## New orbit examples
 
-For each particle count, generate initial conditions once and give identical copies to CPU and GPU. Hold the integrator, precision, dt, total steps and recording policy fixed. Start with N=3,5,10,20,50,100 and extend until a sustained crossover is observed; refine the interval around that crossing. Repeat with several fixed seeds, warm up GPU execution, synchronize timing, and compare numerical results as well as speed.
+The catalog now includes **four-body rounded triangular loops and a seven-pointed star, a five-body 3D trefoil knot, and a six-body nonsymmetric periodic choreography**. In the interactive menu these are entries **19-22**. Earlier entries keep their indices. The trefoil is explicitly unstable; periodic existence must not be confused with perturbation stability. [Initial-condition provenance and local checks](docs/orbits/2026-10-20/README.md).
 
-Report both the application-level cost (including per-step recording/transfers) and a separately instrumented compute-only cost. The current GPU path transfers complete snapshots each step, and the CPU baseline uses Python pair loops, so a crossover measures **these implementations on the tested hardware**, not an intrinsic CPU/GPU boundary. Changing N also changes the physical initial system; the purpose of this sweep is performance, not physical convergence.
+![Four new orbit shapes](docs/orbits/2026-10-20/orbit_previews.png)
 
-The detailed [benchmark plan](docs/cpu_gpu_benchmark_plan.md) explains the controls, timing boundaries, error checks and stop/refinement rules. No crossover measurement is claimed yet.
+## Measured CPU/GPU performance and crossover
+
+Tests ran on the author's **Intel Core i9-13900K and NVIDIA GeForce RTX 5090**, using float64. CPU optimization now offers the original dictionary implementation, a Numba array single-thread implementation, and a Numba array multi-thread implementation. Arrays avoid per-step dictionary conversion; compiled loops remove Python interpreter overhead. Multi-thread work is split by target particle with no shared output writes. No fast-math or gravitational softening is introduced.
+
+The **2026-10-20 retest** contains 240 warmed measurements (80 configurations, three repeats). The particle sweep uses fixed dt=0.001, 100 steps, the same seed/initial arrays within each comparison, and **8 worker threads** for multi-thread CPU. Timings include integration, recording and diagnostics, excluding initialization/JIT, drawing and export.
+
+| CPU baseline compared with GPU | KDK sampled crossover bracket | RK4 sampled crossover bracket |
+|---|---:|---:|
+| Original dictionary CPU | N=6 to 10 | N=6 to 10 |
+| Array single-thread CPU | N=300 to 1000 | N=300 to 1000 |
+| Array multi-thread CPU (8 workers) | N=3000 to 10000 | N=1000 to 3000 |
+
+Each bracket lists a CPU-faster sampled point followed by the first GPU-faster sampled median. **These are measured brackets, not exact critical particle counts.** At the larger endpoint the observed repeat ranges separate. The results do not follow a rule that N merely needs to exceed the CPU's core count.
+
+For example, at N=100 and 100 steps, KDK takes 6.003 s on dictionary CPU, 0.00913 s on array single-thread, 0.00773 s on array multi-thread, and 0.04785 s on GPU. The CPU implementation strongly changes the comparison; a large speedup over Python loops is not an intrinsic GPU hardware advantage.
+
+![CPU and GPU particle-count scaling](docs/reports/2026-10-20-backends/backend_particle_scaling.png)
+
+[Full latest report, all timings, hardware/software, load evidence and limitations](docs/reports/2026-10-20-backends/README.md). The suite also scans 100/300/1000 steps at N=30 and checks cross-backend numerical agreement. Background load was monitored, but hardware was not exclusive and clocks were not fixed. Results apply to these workloads, implementations and this machine.
+
+The **earlier 2026-10-07 dictionary/GPU study** used 1000 steps and finer low-N sampling: KDK crossed between N=6 and 7; RK4 was nearly tied at N=6 and GPU-faster at N=7. It used three seeds for confirmation and 262 measured runs. [Historical results and plans](docs/reports/2026-10-07-cpu-gpu/results.md). These findings are retained separately; they are not an optimized-CPU comparison and must not be pooled with the newer round. The intermediate [2026-10-19 array-backend timing round](docs/reports/2026-10-19-backends/README.md) is also retained as historical evidence.
 
 ## Remaining work
 
-- Systematic CPU/GPU performance and numerical-consistency validation.
-- Lower-overhead GPU execution and reduced host/device transfers; more efficient CPU implementation.
+- Refine the latest crossover brackets with more particle counts, seeds, durations and thread counts; broaden long-time CPU/GPU numerical validation.
+- Reduce GPU launch/transfer overhead and benchmark recording costs; further tune the compiled CPU implementation.
 - Chunked/on-disk trajectory recording to bound memory usage; safer long-run restart/resume.
 - Broader reference convergence, analytic two-body benchmarks, long-time and close-encounter tests.
-- Long-term energy drift and recovery analysis: evaluate sampling with trend fitting and relatively flat interval/baseline analysis; both remain candidates, with no method selected yet. See the [planned analysis](docs/ROADMAP.md#planned-long-term-energy-drift-and-recovery-analysis).
+- Extend energy-drift analysis: sampled trend fitting is implemented; repeat-sampling robustness and relatively flat interval/baseline recovery analysis remain to be evaluated. See the [planned analysis](docs/ROADMAP.md#planned-long-term-energy-drift-and-recovery-analysis).
 - Controlled experiments with gravitational softening or regularization; document any physical model change.
 - Higher-order or alternative integrators beyond classical RK4; assess any method-switching scheme before adoption.
 - A formal project report with reproducible figures and a wider suite of initial conditions.

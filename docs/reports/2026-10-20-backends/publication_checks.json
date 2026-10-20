@@ -1,0 +1,159 @@
+{
+  "status": "passed",
+  "local_hardware": true,
+  "checks": [
+    "published source equals local AST except portable figure-export destination",
+    "exact benchmark snapshot SHA256 matches",
+    "all 240 timings reproduce 80 median summaries",
+    "crossover endpoints verified against medians",
+    "edited documentation local links resolve",
+    "240-run workload plan parses",
+    "22-entry hidden GUI builds"
+  ],
+  "smoke_runs": [
+    {
+      "method": "1",
+      "mode": "fixed",
+      "backend": "cpu",
+      "passed": true
+    },
+    {
+      "method": "1",
+      "mode": "fixed",
+      "backend": "cpu_array",
+      "passed": true
+    },
+    {
+      "method": "1",
+      "mode": "fixed",
+      "backend": "cpu_parallel",
+      "passed": true
+    },
+    {
+      "method": "1",
+      "mode": "fixed",
+      "backend": "gpu",
+      "passed": true
+    },
+    {
+      "method": "1",
+      "mode": "timescale",
+      "backend": "cpu",
+      "passed": true
+    },
+    {
+      "method": "1",
+      "mode": "timescale",
+      "backend": "cpu_array",
+      "passed": true
+    },
+    {
+      "method": "1",
+      "mode": "timescale",
+      "backend": "cpu_parallel",
+      "passed": true
+    },
+    {
+      "method": "1",
+      "mode": "timescale",
+      "backend": "gpu",
+      "passed": true
+    },
+    {
+      "method": "1",
+      "mode": "acceleration_ratio",
+      "backend": "cpu",
+      "passed": true
+    },
+    {
+      "method": "1",
+      "mode": "acceleration_ratio",
+      "backend": "cpu_array",
+      "passed": true
+    },
+    {
+      "method": "1",
+      "mode": "acceleration_ratio",
+      "backend": "cpu_parallel",
+      "passed": true
+    },
+    {
+      "method": "1",
+      "mode": "acceleration_ratio",
+      "backend": "gpu",
+      "passed": true
+    },
+    {
+      "method": "2",
+      "mode": "fixed",
+      "backend": "cpu",
+      "passed": true
+    },
+    {
+      "method": "2",
+      "mode": "fixed",
+      "backend": "cpu_array",
+      "passed": true
+    },
+    {
+      "method": "2",
+      "mode": "fixed",
+      "backend": "cpu_parallel",
+      "passed": true
+    },
+    {
+      "method": "2",
+      "mode": "fixed",
+      "backend": "gpu",
+      "passed": true
+    },
+    {
+      "method": "2",
+      "mode": "timescale",
+      "backend": "cpu",
+      "passed": true
+    },
+    {
+      "method": "2",
+      "mode": "timescale",
+      "backend": "cpu_array",
+      "passed": true
+    },
+    {
+      "method": "2",
+      "mode": "timescale",
+      "backend": "cpu_parallel",
+      "passed": true
+    },
+    {
+      "method": "2",
+      "mode": "timescale",
+      "backend": "gpu",
+      "passed": true
+    },
+    {
+      "method": "2",
+      "mode": "acceleration_ratio",
+      "backend": "cpu",
+      "passed": true
+    },
+    {
+      "method": "2",
+      "mode": "acceleration_ratio",
+      "backend": "cpu_array",
+      "passed": true
+    },
+    {
+      "method": "2",
+      "mode": "acceleration_ratio",
+      "backend": "cpu_parallel",
+      "passed": true
+    },
+    {
+      "method": "2",
+      "mode": "acceleration_ratio",
+      "backend": "gpu",
+      "passed": true
+    }
+  ]
+}

@@ -4,7 +4,7 @@
 
 53-60 adeptive method scan KDK butterfly I
 
-67-68 Theoretical same cost accurency compare
+67-69 Theoretical same cost accurency compare
 
 [2026-10-07 local CPU test suite]
 
@@ -28,4 +28,236 @@
     h=7.793343548875e-5, T=6.2346748391; RK4 reference h/20, check h/10; fixed KDK/RK4 h,h/2,h/4; KDK timescale eta=0.03,0.01; KDK ratio (N,K)=(2,7),(3,4),(5,3).
     Result: reference-check position difference=1.747e-09; smallest tested non-reference position RMSE: RK4 fixed h/4 (1.682e-07, 45.80s). Compare efficiency using the full cost/error table, not error alone.
 
-Detailed results and plots: reports/2026-10-07/results.md
+Detailed results and plots: ../Codex/2026-10-07-numerical-tests/results.md
+
+[2026-10-07 local CPU/GPU crossover tests]
+    Hardware: 13th Gen Intel(R) Core(TM) i9-13900K / NVIDIA GeForce RTX 5090.
+    Fixed dt=0.001, T=1, 1000 steps, float64, diagnostics every 10 steps; no adaptive stepping.
+    Warmed sequential application-level Compute_time_s; drawing/export excluded; CPU/GPU use identical initial arrays.
+
+122-127 coarse KDK CPU/GPU, N=3, seed=221024875, 3 repeats/backend
+    Median CPU=0.066417s; GPU=0.267302s; CPU/GPU=0.248.
+
+128-133 coarse KDK CPU/GPU, N=5, seed=221024875, 3 repeats/backend
+    Median CPU=0.170627s; GPU=0.282633s; CPU/GPU=0.604.
+
+134-139 coarse KDK CPU/GPU, N=10, seed=221024875, 3 repeats/backend
+    Median CPU=0.631911s; GPU=0.272397s; CPU/GPU=2.320.
+
+140-145 coarse KDK CPU/GPU, N=20, seed=221024875, 3 repeats/backend
+    Median CPU=2.429174s; GPU=0.275046s; CPU/GPU=8.832.
+
+146-151 coarse KDK CPU/GPU, N=50, seed=221024875, 3 repeats/backend
+    Median CPU=14.947990s; GPU=0.310003s; CPU/GPU=48.219.
+
+152-157 coarse KDK CPU/GPU, N=100, seed=221024875, 3 repeats/backend
+    Median CPU=59.465650s; GPU=0.482077s; CPU/GPU=123.353.
+
+158-163 coarse RK4 CPU/GPU, N=3, seed=221024875, 3 repeats/backend
+    Median CPU=0.150243s; GPU=0.541951s; CPU/GPU=0.277.
+
+164-169 coarse RK4 CPU/GPU, N=5, seed=221024875, 3 repeats/backend
+    Median CPU=0.383886s; GPU=0.550456s; CPU/GPU=0.697.
+
+170-175 coarse RK4 CPU/GPU, N=10, seed=221024875, 3 repeats/backend
+    Median CPU=1.459509s; GPU=0.552345s; CPU/GPU=2.642.
+
+176-181 coarse RK4 CPU/GPU, N=20, seed=221024875, 3 repeats/backend
+    Median CPU=5.731798s; GPU=0.552467s; CPU/GPU=10.375.
+
+182-187 coarse RK4 CPU/GPU, N=50, seed=221024875, 3 repeats/backend
+    Median CPU=35.175099s; GPU=0.581633s; CPU/GPU=60.476.
+
+188-193 coarse RK4 CPU/GPU, N=100, seed=221024875, 3 repeats/backend
+    Median CPU=140.280150s; GPU=0.816942s; CPU/GPU=171.714.
+
+194-203 refine KDK CPU/GPU, N=7, seed=221024875, 5 repeats/backend
+    Median CPU=0.315426s; GPU=0.267458s; CPU/GPU=1.179.
+
+204-213 refine KDK CPU/GPU, N=6, seed=221024875, 5 repeats/backend
+    Median CPU=0.240251s; GPU=0.272622s; CPU/GPU=0.881.
+
+214-223 confirm KDK CPU/GPU, N=6, seed=221024875, 5 repeats/backend
+    Median CPU=0.240274s; GPU=0.279153s; CPU/GPU=0.861.
+
+224-233 confirm KDK CPU/GPU, N=6, seed=402548423, 5 repeats/backend
+    Median CPU=0.238491s; GPU=0.274992s; CPU/GPU=0.867.
+
+234-243 confirm KDK CPU/GPU, N=6, seed=566130906, 5 repeats/backend
+    Median CPU=0.239653s; GPU=0.281811s; CPU/GPU=0.850.
+
+244-253 confirm KDK CPU/GPU, N=7, seed=221024875, 5 repeats/backend
+    Median CPU=0.318650s; GPU=0.273721s; CPU/GPU=1.164.
+
+254-263 confirm KDK CPU/GPU, N=7, seed=402548423, 5 repeats/backend
+    Median CPU=0.317441s; GPU=0.269430s; CPU/GPU=1.178.
+
+264-273 confirm KDK CPU/GPU, N=7, seed=566130906, 5 repeats/backend
+    Median CPU=0.320204s; GPU=0.270775s; CPU/GPU=1.183.
+
+274-283 refine RK4 CPU/GPU, N=7, seed=221024875, 5 repeats/backend
+    Median CPU=0.733342s; GPU=0.543599s; CPU/GPU=1.349.
+
+284-293 refine RK4 CPU/GPU, N=6, seed=221024875, 5 repeats/backend
+    Median CPU=0.538893s; GPU=0.526675s; CPU/GPU=1.023.
+
+294-303 confirm RK4 CPU/GPU, N=5, seed=221024875, 5 repeats/backend
+    Median CPU=0.388690s; GPU=0.558072s; CPU/GPU=0.696.
+
+304-313 confirm RK4 CPU/GPU, N=5, seed=402548423, 5 repeats/backend
+    Median CPU=0.396614s; GPU=0.582647s; CPU/GPU=0.681.
+
+314-323 confirm RK4 CPU/GPU, N=5, seed=566130906, 5 repeats/backend
+    Median CPU=0.388539s; GPU=0.548305s; CPU/GPU=0.709.
+
+324-333 confirm RK4 CPU/GPU, N=6, seed=221024875, 5 repeats/backend
+    Median CPU=0.553616s; GPU=0.558219s; CPU/GPU=0.992.
+
+334-343 confirm RK4 CPU/GPU, N=6, seed=402548423, 5 repeats/backend
+    Median CPU=0.551212s; GPU=0.564986s; CPU/GPU=0.976.
+
+344-353 confirm RK4 CPU/GPU, N=6, seed=566130906, 5 repeats/backend
+    Median CPU=0.547828s; GPU=0.555558s; CPU/GPU=0.986.
+
+354-363 confirm RK4 CPU/GPU, N=7, seed=221024875, 5 repeats/backend
+    Median CPU=0.725918s; GPU=0.518458s; CPU/GPU=1.400.
+
+364-373 confirm RK4 CPU/GPU, N=7, seed=402548423, 5 repeats/backend
+    Median CPU=0.727865s; GPU=0.530585s; CPU/GPU=1.372.
+
+374-383 confirm RK4 CPU/GPU, N=7, seed=566130906, 5 repeats/backend
+    Median CPU=0.729429s; GPU=0.531191s; CPU/GPU=1.373.
+
+    KDK: CPU-faster medians at N=6, GPU-faster medians at N=7 for all three confirmation seeds.
+    RK4: N=5 favors CPU, N=6 is near a tie, N=7 favors GPU across the three confirmation seeds.
+    Near-unity timings should be treated as an uncertainty interval; see seed-by-seed checks in the detailed report.
+    Maximum position NRMSE versus same-group CPU baseline: 0.000000e+00.
+Detailed report: ../Codex/2026-10-07-cpu-gpu-crossover/results.md
+
+[2026-10-10 local CPU energy-drift tests]
+    Orbit: Butterfly I (Suvakov-Dmitrasinovic I.A-2); identical initial states; local Intel Core i9-13900K CPU, float64.
+    h=7.793343548875e-5; T=18.7040245173 (3 nominal periods). Adaptive: acceleration ratio N=2, K=7.
+    Drift analysis uses the fitted slope k, not a visual estimate or endpoint energy difference.
+    Fit: E(t)-E(0)=b+k*t, free intercept, 1000 uniform random physical times, sampling seed=0.
+    All four fits use identical physical sample times and linear interpolation of full saved energies; no spike removal.
+    E_drift_k is in code energy/code time. E_drift_k_norm = k / (initial kinetic energy + abs(initial potential energy)), in 1/code time.
+    The new columns follow E_RMSE and E_nRMSE in runs.dat. They are rates, not RMSE values; unavailable fits are NA.
+    Sign indicates upward/downward fitted drift; magnitude indicates rate. Compare sampling sensitivity before interpreting the sign.
+    Sampling checks: 1000 points with seeds 0..9; 10000 points with seed=0. These reuse saved data, not new simulations.
+
+388-389 Fixed-step KDK versus RK4, same h
+    Line 388: KDK fixed; steps=240,000; Compute_time_s=16.424449.
+        E_drift_k=+4.07948775e-06; E_drift_k_norm=+1.44161372e-06.
+        k range over sampling seeds: [-2.97891224e-06, +2.40953084e-05]; 10000-point k=-4.16623156e-06.
+        Fit R_squared=0.00134192; residual RMSE=5.92377249e-04.
+        Drift plot: 2026-10-10_03-57-37_energy_drift.png; full fit: 2026-10-10_03-57-37_energy_drift.json.
+    Line 389: RK4 fixed; steps=240,000; Compute_time_s=35.696329.
+        E_drift_k=-2.82801917e-05; E_drift_k_norm=-9.99368424e-06.
+        k range over sampling seeds: [-2.84737940e-05, -2.82104345e-05]; 10000-point k=-2.83214718e-05.
+        Fit R_squared=0.985553; residual RMSE=1.82256030e-05.
+        Drift plot: 2026-10-10_03-57-57_energy_drift.png; full fit: 2026-10-10_03-57-57_energy_drift.json.
+
+390-391 Adaptive KDK versus RK4, same h upper limit; N=2 K=7
+    Line 390: KDK ratio N=2 K=7; steps=2,483,500; Compute_time_s=204.769524.
+        E_drift_k=+8.30788629e-08; E_drift_k_norm=+2.93584970e-08.
+        k range over sampling seeds: [+8.18319028e-08, +8.43100457e-08]; 10000-point k=+8.28794323e-08.
+        Fit R_squared=0.991179; residual RMSE=4.17166882e-08.
+        Drift plot: 2026-10-10_03-58-37_energy_drift.png; full fit: 2026-10-10_03-58-37_energy_drift.json.
+    Line 391: RK4 ratio N=2 K=7; steps=2,483,497; Compute_time_s=406.215891.
+        E_drift_k=+1.47319315e-12; E_drift_k_norm=+5.20598564e-13.
+        k range over sampling seeds: [+1.42644665e-12, +1.63795851e-12]; 10000-point k=+1.53091949e-12.
+        Fit R_squared=0.517565; residual RMSE=7.57085445e-12.
+        Drift plot: 2026-10-10_04-02-19_energy_drift.png; full fit: 2026-10-10_04-02-19_energy_drift.json.
+
+    Slope-based interpretation:
+    - Fixed KDK: default k=+4.079488e-6, but the seed range crosses zero and the 10000-point fit gives k=-4.166232e-6.
+      R_squared=0.00134. The inferred direction is sampling-sensitive; do not claim a robust positive trend or proven zero drift.
+    - Fixed RK4: k=-2.828019e-5, normalized k=-9.993684e-6. All ten seed fits are negative with a narrow range.
+      This supports a downward fitted drift rate over the tested interval.
+    - Adaptive KDK: k=+8.307886e-8, normalized k=+2.935850e-8; all ten seed fits are positive.
+      This supports a small upward fitted drift rate. A stable sign does not make the magnitude large.
+    - Adaptive RK4: k=+1.473193e-12, normalized k=+5.205986e-13; all ten seed fits are positive.
+      This is a much smaller measured slope magnitude than the other default fits. It is not proof of exactly zero drift.
+      This experiment does not separate rounding and truncation effects.
+    - Comparisons are for this orbit, interval and equal dt/upper limit; adaptive runs use many more steps, so costs are unequal.
+    - k measures a fitted average trend; it does not measure all energy excursions or establish trajectory accuracy.
+    - Sampling-seed ranges indicate point-selection sensitivity, not a confidence interval or physical uncertainty.
+    - Position RMSE/NRMSE remain NA; no energy-versus-position error plot was produced.
+Detailed numerical data: ../Codex/2026-10-10-energy-drift-tests/analysis_results.json
+Updated slope-based report: ../Codex/2026-10-10-drift-columns/results.txt
+Plots, full arrays and fit JSON: graph and data, using the same date/time stem as runs.dat.
+
+[2026-10-19 Free-fall follow-up and planned deterministic energy-drift analysis]
+    Earlier fixed-step Butterfly I scan (2026-10-10, default sampling seed=0):
+      |normalized k| was smaller for KDK (1.44161372e-6) than RK4 (9.99368424e-6).
+      This was conditional on that orbit, step size, interval and estimator, not a universal ordering.
+      The same scan's adaptive runs already had a much smaller RK4 fitted slope.
+    Free-fall F1: masses=(1, 0.8, 0.8), fixed dt=4.571562e-5, T=1.8286248401,
+      CPU float64, adaptive off; original fit uses 1000 uniform random physical times, seed=0.
+      KDK normalized k=+5.940154554233546e-8; RK4 normalized k=-1.6486381513383438e-10.
+      Units: inverse code time. KDK's absolute fitted slope is about 360 times RK4's here.
+      Source: 2026-10-19_21-56-50_energy_drift.json (KDK),
+              2026-10-19_21-55-27_energy_drift.json (RK4), in graph and data.
+    Sampling sensitivity:
+      Refitting one unchanged KDK numerical solution with seeds 0..9 changed |normalized k|
+      by roughly 1-2 orders of magnitude (observed extrema about 160-fold), with sign changes.
+      This is a fitting-sample seed, not a physical-initial-condition seed.
+      RK4 was substantially less sensitive in this test.
+      Narrow energy excursions alter the sampled covariance with time; dividing by one fixed
+      energy scale cannot remove the resulting relative slope variation.
+    Decision for subsequent analysis (NOT IMPLEMENTED in the simulator as of this report edit):
+      Replace random subsampling with deterministic continuous-time least squares, free intercept,
+      using the piecewise-linear curve through ALL saved time/energy records.
+      Integrate the fitting statistics over each actual physical-time interval; do not give every
+      adaptive integration step equal weight. Normalize the slope by the same initial energy scale.
+      This is linear-cost postprocessing and does not require new gravitational force evaluations.
+      It removes sampling-seed dependence, not integration/interpolation error or fitting-window
+      sensitivity. Report maximum energy excursion, endpoint offset and time-weighted RMSE as well.
+      A global fitted slope is not by itself evidence of secular drift or accurate trajectories.
+    The Chinese Word report now includes this progression in sections 5.1 and 5.2.
+    This edit changes reports only. Earlier raw measurements and simulator source are preserved.
+
+[2026-10-19 Butterfly I convergence scan]
+    Frozen current CPU_ARRAY_SINGLE kernels; float64; same initial state; adaptive off.
+    RK4 h/128 reference and h/64 check; 7 fixed dt levels for each KDK and RK4.
+    Reference RMS difference=2.0168515328e-11; 1% relative qualification required for position fitting.
+    Energy RMS: exact time integral for piecewise-linear per-step energy offsets, no random samples.
+    Position: common 80001 times, checked at 160001; no phase or rigid-body alignment.
+    Position-fit exclusions: ['RK4_06']
+    Fits in log space: error=A*(dt/h)^p; global fitted p is descriptive, not a theoretical order proof.
+    Fit columns: quantity; full-range p; exploratory h/8..2h p; shared-window log R_squared.
+    KDK 位置; 2.0146; 1.9859; 0.99998603
+    KDK 能量; 2.0252; 1.9825; 0.99998477
+    RK4 位置; 5.9089; 4.9855; 0.99999982
+    RK4 能量; 6.2525; 5.0049; 0.99999769
+    Source snapshots, raw outputs, native queue and analysis: ../Codex/2026-10-19-convergence-study
+    Production source untouched. Results remain in isolated Codex directory, not E-drive run history.
+
+[2026-10-19 Four-backend and local-adaptive study]
+    240 warmed application timing runs; CPU original N=3..100, accelerated N=3..10000; 8 CPU workers.
+    48 candidate runs: 4 base dt x global/local x KDK/RK4 x 3 repeats; Butterfly I, one period.
+    Initial binary64 reference pair failed 3 fine-point qualification checks.
+    Final binary128 adaptive RK4 reference pair RMS difference=6.280730498445e-15; 16/16 candidate configurations resolved.
+    Position normalized by initial RMS COM radius; energy by K0+abs(U0); no random measurement samples.
+    method, position_RMS, position_NRMSE, energy_RMS, energy_NRMSE, median_seconds (dt=T/4000)
+    scan_1_global_d4000_r1, 2.628422159694e-04, 3.219146559937e-04, 1.515685527530e-04, 5.356145644185e-05, 4.455265500001e+00
+    scan_1_local_d4000_r1, 3.000689998927e-04, 3.675079686822e-04, 1.730627004019e-04, 6.115708120793e-05, 1.050773080000e+01
+    scan_2_global_d4000_r1, 4.357756534396e-10, 5.337139966275e-10, 2.450998160916e-10, 8.661363379833e-11, 4.577487800001e+00
+    scan_2_local_d4000_r1, 5.272489687099e-09, 6.457454703739e-09, 3.090863353023e-09, 1.092252580391e-09, 1.777753610000e+01
+    Raw data, plans, figures and verification: ../Codex/2026-10-19-backends-local-adaptive
+    Production simulation source unchanged; no production archive writes.
+
+
+2026-10-20: Local stepping removed; CPU/GPU retest with load telemetry
+User found no speed benefit and unacceptable momentum error; the local runtime, menu entry, batch option, module and standalone README are removed. Historical data are retained. Global solvers and logarithmic plots are retained.
+Regression: four backends x KDK/RK4 x fixed/global acceleration-ratio/timescale, numerical arrays unchanged. UI and retired-config rejection passed.
+240 formal timings (80 configurations x 3 repeats); CPU multiple=8 threads. Same initial-state hashes as the prior round. Continuous Windows CPU/NVML telemetry at 1 Hz, low-load gates before groups.
+N=10000, 100 steps, median seconds:
+  KDK cpu_array: 30.573677
+  KDK cpu_parallel: 5.520593
+  KDK gpu: 3.091002
+  RK4 cpu_array: 120.098864
+  RK4 cpu_parallel: 19.876876
+  RK4 gpu: 5.542675
+GPU vs CPU multiple sampled crossover: KDK N=3000..10000; RK4 N=1000..3000. Not exact crossover points. Millisecond results retain measurable jitter.
+Full methods, raw data, source snapshots, load evidence and plots: Codex/2026-10-20-backend-retest/README.md

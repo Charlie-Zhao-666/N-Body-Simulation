@@ -1,0 +1,42 @@
+[
+  {
+    "method": "1",
+    "backend": "cpu",
+    "time_vs_steps_exponent": 1.0020747947825512
+  },
+  {
+    "method": "1",
+    "backend": "cpu_array",
+    "time_vs_steps_exponent": 1.02219229632264
+  },
+  {
+    "method": "1",
+    "backend": "cpu_parallel",
+    "time_vs_steps_exponent": 0.9925022371564798
+  },
+  {
+    "method": "1",
+    "backend": "gpu",
+    "time_vs_steps_exponent": 1.0246742849525405
+  },
+  {
+    "method": "2",
+    "backend": "cpu",
+    "time_vs_steps_exponent": 0.995351462791102
+  },
+  {
+    "method": "2",
+    "backend": "cpu_array",
+    "time_vs_steps_exponent": 0.9960531170812
+  },
+  {
+    "method": "2",
+    "backend": "cpu_parallel",
+    "time_vs_steps_exponent": 0.9924063680073617
+  },
+  {
+    "method": "2",
+    "backend": "gpu",
+    "time_vs_steps_exponent": 0.9905403239385487
+  }
+]

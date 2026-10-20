@@ -1,0 +1,28 @@
+{
+  "captured_at": "2026-10-07T22:35:38.699810-04:00",
+  "cpu": "13th Gen Intel(R) Core(TM) i9-13900K",
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "python": "3.14.3 (tags/v3.14.3:323c59a, Feb  3 2026, 16:04:56) [MSC v.1944 64 bit (AMD64)]",
+  "numpy": "2.4.3",
+  "cupy": "14.2.0",
+  "cuda_runtime": 13020,
+  "cuda_driver": 13030,
+  "os": "Windows-11-10.0.22631-SP0",
+  "logical_cpus": 32,
+  "source_sha256": "2a07ad1ffbe75f7fd22385d9aca8253e1da22d9610c625688e2c348506910590",
+  "dtype": "float64",
+  "dt": 0.001,
+  "total_time": 1.0,
+  "steps": 1000,
+  "sample_every": 10,
+  "adaptive": false,
+  "seeds": [
+    221024875,
+    402548423,
+    566130906
+  ],
+  "computation": "Existing user-local CPU pair-loop and CuPy GPU implementations; no remote simulation hardware",
+  "timing": "Existing Compute_time_s is primary; synchronized whole run_simulation outer timer is supplementary; plotting/export excluded",
+  "initial_history_rows": 103,
+  "initial_history_lines": 121
+}

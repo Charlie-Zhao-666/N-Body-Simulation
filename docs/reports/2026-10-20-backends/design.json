@@ -1,0 +1,122 @@
+{
+  "formal_runs": 240,
+  "seed": 221024875,
+  "groups": [
+    {
+      "particle_count": 3,
+      "steps": 100,
+      "backends": [
+        "cpu",
+        "cpu_array",
+        "cpu_parallel",
+        "gpu"
+      ]
+    },
+    {
+      "particle_count": 6,
+      "steps": 100,
+      "backends": [
+        "cpu",
+        "cpu_array",
+        "cpu_parallel",
+        "gpu"
+      ]
+    },
+    {
+      "particle_count": 10,
+      "steps": 100,
+      "backends": [
+        "cpu",
+        "cpu_array",
+        "cpu_parallel",
+        "gpu"
+      ]
+    },
+    {
+      "particle_count": 30,
+      "steps": 100,
+      "backends": [
+        "cpu",
+        "cpu_array",
+        "cpu_parallel",
+        "gpu"
+      ]
+    },
+    {
+      "particle_count": 100,
+      "steps": 100,
+      "backends": [
+        "cpu",
+        "cpu_array",
+        "cpu_parallel",
+        "gpu"
+      ]
+    },
+    {
+      "particle_count": 300,
+      "steps": 100,
+      "backends": [
+        "cpu_array",
+        "cpu_parallel",
+        "gpu"
+      ]
+    },
+    {
+      "particle_count": 1000,
+      "steps": 100,
+      "backends": [
+        "cpu_array",
+        "cpu_parallel",
+        "gpu"
+      ]
+    },
+    {
+      "particle_count": 3000,
+      "steps": 100,
+      "backends": [
+        "cpu_array",
+        "cpu_parallel",
+        "gpu"
+      ]
+    },
+    {
+      "particle_count": 10000,
+      "steps": 100,
+      "backends": [
+        "cpu_array",
+        "cpu_parallel",
+        "gpu"
+      ]
+    },
+    {
+      "particle_count": 30,
+      "steps": 300,
+      "backends": [
+        "cpu",
+        "cpu_array",
+        "cpu_parallel",
+        "gpu"
+      ]
+    },
+    {
+      "particle_count": 30,
+      "steps": 1000,
+      "backends": [
+        "cpu",
+        "cpu_array",
+        "cpu_parallel",
+        "gpu"
+      ]
+    }
+  ],
+  "methods": [
+    "KDK",
+    "RK4"
+  ],
+  "repetitions": 3,
+  "warmup_steps": 3,
+  "multi_threads": 8,
+  "primary_timing": "Application integration/recording/diagnostics; excludes setup/JIT and export",
+  "secondary_timing": "Synchronized outer call, includes setup and energy-drift analysis",
+  "constraints": "Single benchmark at a time. Background tasks are monitored, not killed. Three samples give min/max spread, not confidence intervals."
+}

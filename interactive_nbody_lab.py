@@ -1,9 +1,9 @@
-﻿import numpy as np
+import numpy as np
 import time
 import matplotlib.pyplot as plt
 from matplotlib.animation import PillowWriter
 from matplotlib.figure import Figure
-from matplotlib.ticker import FixedLocator, FuncFormatter, NullLocator, LogLocator, MaxNLocator
+from matplotlib.ticker import FixedLocator, FuncFormatter, NullLocator, LogLocator, MaxNLocator, ScalarFormatter
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from mpl_toolkits.mplot3d import proj3d
 from pathlib import Path
@@ -27,10 +27,11 @@ from stable_orbits import STABLE_ORBITS as BASE_STABLE_ORBITS
 # Li & Liao (2019), Collisionless periodic orbits in the free-fall three-body problem.
 # Retain the authors' coordinates without shifting the center of mass; the published initial
 # values have about 10 decimal places, so exact periodic closure is not guaranteed.
-STABLE_ORBITS = [*BASE_STABLE_ORBITS, {
+# Preserve the historical free-fall entry at menu #16 when the base catalog grows.
+STABLE_ORBITS = [*BASE_STABLE_ORBITS[:15], {
     "name": "Free-fall F1 (1, 0.8, 0.8) · Li-Liao",
     "N": 3,
-    "seed": len(BASE_STABLE_ORBITS) + 1,  # Menu identifier; this seed does not generate the initial conditions.
+    "seed": 16,  # Historical menu identifier, not a random initial-condition seed.
     "masses": [1.0, 0.8, 0.8],
     "positions": [[-0.5, 0.0, 0.0], [0.5, 0.0, 0.0],
                   [0.0009114239, 0.3019805958, 0.0]],
@@ -41,9 +42,127 @@ STABLE_ORBITS = [*BASE_STABLE_ORBITS, {
     "recommended_method": "2",
     "source": "https://numericaltank.sjtu.edu.cn/three-body/free-fall-3b/free-fall-3b-movies.htm",
     "note": "Masses: 1, 0.8, 0.8; initially at rest. RK4 selected; start with one period and adaptive stepping off.",
-}]
+}, *[dict(orbit, seed=index + 17)
+      for index, orbit in enumerate(BASE_STABLE_ORBITS[15:])]]
 
 G = 1.0
+
+COMPUTE_BACKENDS = {
+    "cpu": "CPU (dictionary / original)",
+    "cpu_array": "CPU (array / single thread)",
+    "cpu_parallel": "CPU (array / multi-thread)",
+    "gpu": "GPU (NVIDIA / CuPy)",
+}
+BACKEND_CODES = {label: code for code, label in COMPUTE_BACKENDS.items()}
+ADAPTIVE_ALGORITHMS = {
+    "timescale": "Time-scale method",
+    "acceleration_ratio": "Acceleration ratio (global)",
+}
+ADAPTIVE_CODES = {label: code for code, label in ADAPTIVE_ALGORITHMS.items()}
+
+
+def velocity_acceleration_projections(accelerations, velocities):
+    """Signed scalar components at the same recorded time; zero direction -> NaN.
+
+    a_along_v = a dot v_hat (code length / time**2)
+    v_along_a = v dot a_hat (code length / time)
+    Leading dimensions are preserved, normally [time, star].
+    """
+    a = np.asarray(accelerations, dtype=float)
+    v = np.asarray(velocities, dtype=float)
+    if a.shape != v.shape or a.ndim < 1 or a.shape[-1] != 3:
+        raise ValueError("Projection inputs must have matching (..., 3) shapes.")
+    a_norm = np.hypot.reduce(a, axis=-1)
+    v_norm = np.hypot.reduce(v, axis=-1)
+    # Normalize first: avoid under/overflow from squaring or multiplying tiny/large vectors.
+    a_hat = np.full_like(a, np.nan)
+    v_hat = np.full_like(v, np.nan)
+    np.divide(a, a_norm[..., None], out=a_hat, where=a_norm[..., None] > 0)
+    np.divide(v, v_norm[..., None], out=v_hat, where=v_norm[..., None] > 0)
+    return np.sum(a * v_hat, axis=-1), np.sum(v * a_hat, axis=-1)
+
+
+def projection_export_arrays(accelerations, velocities, times=None):
+    a_along_v, v_along_a = velocity_acceleration_projections(accelerations, velocities)
+    arrays = dict(acceleration_along_velocity=a_along_v, velocity_along_acceleration=v_along_a,
+                projection_convention="signed scalar components; shape [time, star]; "
+                "a dot v_hat and v dot a_hat; zero direction is NaN; "
+                "code length/time^2 and code length/time, respectively")
+    if times is not None:
+        ratio, next_dt = relative_speed_change_ratio(accelerations, velocities, times)
+        arrays.update(relative_speed_change_ratio=ratio, next_step_sizes=next_dt,
+                      relative_speed_change_convention="abs(a_parallel[n]) * (t[n+1]-t[n]) / speed[n]; "
+                      "dimensionless first-order estimate, not measured speed change or integration error; "
+                      "zero speed and final record are NaN")
+    return arrays
+
+
+def relative_speed_change_ratio(accelerations, velocities, times):
+    """First-order |a_parallel(t[n])| * (t[n+1]-t[n]) / |v(t[n])|.
+
+    Use the outgoing recorded interval, not the interval ending at this state.
+    Zero speed and the final state (no next interval) are undefined.
+    """
+    a_parallel, _ = velocity_acceleration_projections(accelerations, velocities)
+    speed = np.hypot.reduce(np.asarray(velocities, dtype=float), axis=-1)
+    t = np.asarray(times, dtype=float)
+    if (t.ndim != 1 or len(t) < 2 or a_parallel.shape[0] != len(t) or
+            not np.isfinite(t).all() or np.any(np.diff(t) <= 0)):
+        raise ValueError("Ratio requires matching, strictly increasing record times.")
+    next_dt = np.r_[np.diff(t), np.nan]
+    h = next_dt.reshape((len(t),) + (1,) * (a_parallel.ndim - 1))
+    ratio = np.full_like(speed, np.nan)
+    np.divide(np.abs(a_parallel) * h, speed, out=ratio, where=speed > 0)
+    return ratio, next_dt
+
+
+def set_physical_log_scale(axis, values, positive_only=False):
+    """Preserve signed physical values and exact zeros on logarithmic plots."""
+    data = np.asarray(values, dtype=float)
+    finite = data[np.isfinite(data)]
+    if positive_only and finite.size and np.all(finite > 0):
+        axis.set_yscale("log", base=10)
+        scale = "log"
+    else:
+        extent = float(np.max(np.abs(finite))) if finite.size else 0.
+        threshold = max(extent*1e-6, np.finfo(float).tiny) if extent else 1e-12
+        axis.set_yscale("symlog", base=10, linthresh=threshold, linscale=1.)
+        scale = "symlog"
+        if extent:
+            # Keep labels away from the small linear neighborhood of zero.
+            powers = np.arange(int(np.ceil(np.log10(threshold)))+1,
+                               int(np.floor(np.log10(extent)))+1)
+            powers = powers[::max(1, int(np.ceil(len(powers)/3)))]
+            ticks = np.power(10., powers)
+            ticks = np.r_[-ticks[::-1], 0., ticks]
+            lo, hi = float(np.min(finite)), float(np.max(finite))
+            axis.yaxis.set_major_locator(FixedLocator(
+                ticks[(ticks >= min(0., lo*1.05)) & (ticks <= max(0., hi*1.05))]))
+            axis.yaxis.set_minor_locator(NullLocator())
+    if finite.size and (np.all(finite > 0) or np.all(finite < 0)):
+        smallest, largest = float(np.min(np.abs(finite))), float(np.max(np.abs(finite)))
+        if largest/smallest < 10:
+            # A nearly conserved negative energy may span no powers of ten.
+            # The coordinate transform stays logarithmic; only tick placement
+            # uses actual values so a narrow zoom still has readable labels.
+            axis.yaxis.set_major_locator(MaxNLocator(nbins=4))
+            formatter = ScalarFormatter(useOffset=True)
+            formatter.set_powerlimits((-3, 4))
+            axis.yaxis.set_major_formatter(formatter)
+            axis.yaxis.set_minor_locator(NullLocator())
+    return scale
+
+
+def backend_summary(metadata):
+    """Keep historical CPU/GPU labels; distinguish new CPU modes and actual threads."""
+    code = metadata.get("compute_backend", "cpu")
+    if code == "cpu_array":
+        return "CPU_ARRAY_SINGLE"
+    if code == "cpu_parallel":
+        count = metadata.get("cpu_threads")
+        return f"CPU_ARRAY_MULTI({count}T)" if count is not None else "CPU_ARRAY_MULTI"
+    return code.upper()
+
 
 def dist(s1, s2):
     return np.linalg.norm(s2["pos"] - s1["pos"])
@@ -126,7 +245,7 @@ class AccelerationRatioController:
     reference/current must exceed trigger_ratio before the level decreases.
     This hysteresis avoids repeated switching around a single threshold.
     """
-    def __init__(self, initial_acceleration, max_dt, trigger_ratio=2.0, max_power=3):
+    def __init__(self, initial_acceleration, max_dt, trigger_ratio=2.0, max_power=7):
         self.max_dt = float(max_dt)
         self.trigger_ratio = float(trigger_ratio)
         self.max_power = int(max_power)
@@ -272,6 +391,32 @@ def RMSE(data):
     return np.sqrt(mse)
 
 
+def time_weighted_energy_error(times, energies, energy_scale):
+    """Integrate squared piecewise-linear E(t)-E(0) over all recorded intervals."""
+    t, e = np.asarray(times, dtype=float), np.asarray(energies, dtype=float)
+    if (t.ndim != 1 or e.shape != t.shape or len(t) < 2 or
+            not np.isfinite(t).all() or not np.isfinite(e).all() or np.any(np.diff(t) <= 0)):
+        raise ValueError("Energy statistics require finite, strictly increasing full records.")
+    offsets = e - e[0]
+    amplitude = float(np.max(np.abs(offsets)))
+    # Scale before squaring to protect very small errors from underflow.
+    q = offsets / amplitude if amplitude else offsets
+    integral = 0.
+    duration = float(t[-1] - t[0])
+    for start in range(0, len(t)-1, 100000):
+        stop = min(start+100000, len(t)-1)
+        a, b = q[start:stop], q[start+1:stop+1]
+        integral += float(np.sum((np.diff(t[start:stop+1]) / duration) *
+                                 (a*a + a*b + b*b) / 3.))
+    rms = amplitude * np.sqrt(max(0., integral))
+    scale = float(energy_scale)
+    return dict(version=1, method="full-record time-weighted RMS; exact squared piecewise-linear integral",
+                rmse=float(rms), nrmse=float(rms/scale) if np.isfinite(scale) and scale > 0 else None,
+                source_records=len(t), time_start=float(t[0]), time_end=float(t[-1]),
+                initial_energy=float(e[0]), energy_scale=scale,
+                rmse_units="code energy", nrmse_units="dimensionless")
+
+
 import hashlib
 import html
 from urllib.parse import quote
@@ -279,25 +424,57 @@ import os
 import re
 import tempfile
 import threading
+from functools import lru_cache
+
+
+@lru_cache(maxsize=1)
+def cpu_model_name():
+    """Read the local CPU model once; never guess hardware for imported records."""
+    try:
+        if sys.platform == "win32":
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"HARDWARE\DESCRIPTION\System\CentralProcessor\0") as key:
+                value = winreg.QueryValueEx(key, "ProcessorNameString")[0]
+        elif sys.platform.startswith("linux"):
+            value = next(line.split(":", 1)[1].strip() for line in
+                         Path("/proc/cpuinfo").read_text().splitlines() if line.startswith("model name"))
+        elif sys.platform == "darwin":
+            import subprocess
+            value = subprocess.check_output(["sysctl", "-n", "machdep.cpu.brand_string"], text=True, timeout=5).strip()
+        else:
+            value = "NA"
+        return " ".join(str(value).split()) or "NA"
+    except (OSError, ValueError, StopIteration, KeyError):
+        return "NA"
 
 
 RUN_HISTORY_DIRECTORY = Path(__file__).resolve().parent / "graph and data"
 LEGACY_HISTORY_PATH = Path(__file__).resolve().parent / "运行记录" / "运行记录.csv"
 RUN_HISTORY_COLUMNS = [
     "Date", "Time", "Method", "Initial_condition", "dt_initial",
-    "Steps_set", "Steps_actual", "Adaptive_method", "Adaptive_param", "K", "E_RMSE", "E_nRMSE", "Position_RMSE", "Position_NRMSE",
+    "Steps_set", "Steps_actual", "Adaptive_method", "Adaptive_param", "K", "E_RMSE", "E_nRMSE", "E_drift_k", "E_drift_k_norm", "Position_RMSE", "Position_NRMSE",
     "Px_RMSE", "Py_RMSE", "Pz_RMSE", "Lx_RMSE", "Ly_RMSE", "Lz_RMSE",
-    "Vcmx_RMSE", "Vcmy_RMSE", "Vcmz_RMSE", "Device", "Compute_time_s", "Sim_T", "Plot",
+    "Vcmx_RMSE", "Vcmy_RMSE", "Vcmz_RMSE", "Device", "Device_model", "Compute_time_s", "Sim_T", "Plot",
 ]
-_HISTORY_FLOAT_COLUMNS = {4, 8, *range(10, 23), 24, 25}
+_HISTORY_FLOAT_COLUMNS = {4, 8, *range(10, 25), 27, 28}
 _HISTORY_INDEX_LOCK = threading.RLock()
 
 
+def _history_drift_values(analysis):
+    """Signed slope and energy-normalized slope; missing fits are not zero drift."""
+    analysis = analysis if isinstance(analysis, dict) else {}
+    values = []
+    for key in ("slope", "normalized_slope"):
+        value = analysis.get(key)
+        values.append(float(value) if isinstance(value, (int, float, np.number))
+                      and np.isfinite(value) else "NA")
+    return values
+
+
 def build_run_history_record(metadata, diagnostics):
-    """Build the same RMSE summary used by the conservation tab."""
+    """New energy rows use all-step time-weighted statistics, never diagnostic subsampling."""
     started = datetime.fromisoformat(metadata["run_started_at"])
-    energy = np.asarray([item["energy"] for item in diagnostics], dtype=float)
-    error = float(RMSE(energy))
+    error = metadata["energy_error"]["rmse"]
     scale = metadata["energy_scale"]
     adaptive_method = adaptive_param = adaptive_k = "NA"
     if metadata["adaptive_enabled"]:
@@ -311,11 +488,12 @@ def build_run_history_record(metadata, diagnostics):
     row = [started.strftime("%Y-%m-%d"), started.strftime("%H:%M:%S"),
            _history_english(metadata["method_name"]), _history_english(initial), metadata["dt"],
            metadata["requested_steps"], metadata["steps"], adaptive_method, adaptive_param, adaptive_k,
-           error, error / scale if scale else np.nan, "NA", "NA"]
+           error, error / scale if scale else np.nan,
+           *_history_drift_values(metadata.get("energy_drift")), "NA", "NA"]
     for key in ("momentum", "angular_momentum", "com_v"):
         values = np.asarray([item[key] for item in diagnostics], dtype=float)
         row.extend(float(RMSE(values[:, axis])) for axis in range(3))
-    row.extend([metadata["compute_backend"].upper(), metadata["elapsed_seconds"],
+    row.extend([backend_summary(metadata), metadata.get("device_name", "NA"), metadata["elapsed_seconds"],
                 metadata["simulation_end_time"]])
     row = ["NA" if isinstance(value, (float, np.floating)) and not np.isfinite(value)
            else value.item() if isinstance(value, np.generic) else value for value in row]
@@ -369,7 +547,7 @@ def _archive_publish_record(directory, entry):
 
 
 def _history_expand_row(row):
-    """Read the old 22/23-column schema without changing its original JSON/CSV."""
+    """Expand historical schemas; an unrecorded hardware model remains NA."""
     row = list(row)
     if len(row) == 22:
         row.append("NA")
@@ -388,8 +566,12 @@ def _history_expand_row(row):
         row = row[:7] + [method, param, power] + row[8:]
     if len(row) == 25:
         row = row[:12] + ["NA", "NA"] + row[12:]
-    if len(row) != 27:
-        raise ValueError("Run summary must have 27 columns (or the legacy 22/23/25-column format).")
+    if len(row) == 27:
+        row = row[:24] + ["NA"] + row[24:]
+    if len(row) == 28:
+        row = row[:12] + ["NA", "NA"] + row[12:]
+    if len(row) != 30:
+        raise ValueError("Run summary must have 30 columns (or the legacy 22/23/25/27/28-column format).")
     return row
 
 
@@ -397,14 +579,14 @@ def _archive_display_row(row):
     row = _history_expand_row(row)
     display = []
     for i, value in enumerate(row):
-        if i == 8 and row[7] == "AccelerationRatio" and value != "NA":
+        if i == 8 and row[7] in ("AccelerationRatio", "LocalAccelerationRatio") and value != "NA":
             display.append(f"{float(value):.1f}")
         elif i == 8 and row[7] == "Timescale" and value != "NA":
             from decimal import Decimal
             text = format(Decimal(str(value)), "f")
             display.append(text.rstrip("0").rstrip(".") if "." in text else text)
         elif (i in _HISTORY_FLOAT_COLUMNS and value != "NA"
-              and not (i in (12, 13) and str(value).startswith("reference_"))):
+              and not (i in (14, 15) and str(value).startswith("reference_"))):
             display.append(f"{float(value):.6e}")
         else:
             display.append(" ".join(str(value).split()))
@@ -427,12 +609,23 @@ def _rebuild_run_history(directory=None):
     rows = []
     for entry in entries:
         row = _history_expand_row(entry["row"])
+        # Backfill display columns from the fit saved with this run; keep records immutable.
+        analysis = entry.get("energy_drift")
+        if analysis is None and row[-1] != "NA":
+            drift_path = directory / (Path(row[-1]).stem + "_energy_drift.json")
+            if drift_path.is_file():
+                saved_fit = json.loads(drift_path.read_text(encoding="utf-8"))
+                if saved_fit.get("run_id") != entry["run_id"]:
+                    raise ValueError("Energy drift analysis run ID mismatch.")
+                analysis = saved_fit.get("analysis")
+        if analysis is not None:
+            row[12:14] = _history_drift_values(analysis)
         position_path = directory / "_position_comparisons" / _archive_record_path(directory, entry["run_id"]).name
         if position_path.exists():
             position = json.loads(position_path.read_text(encoding="utf-8"))
             if position["run_id"] != entry["run_id"]:
                 raise ValueError("Position comparison run ID mismatch.")
-            row[12:14] = [position["rmse"], position["nrmse"]]
+            row[14:16] = [position["rmse"], position["nrmse"]]
         rows.append(_archive_display_row(row))
     # Keep stored filenames relative; build file URLs only for the current display location.
     display_rows = [row[:-1] + [((directory / row[-1]).resolve().as_uri()
@@ -448,13 +641,13 @@ def _rebuild_run_history(directory=None):
         "# Code units unless specified. Compute_time_s: computation seconds; Sim_T: physical simulation time.",
         "# dt_initial is the initial dt / adaptive upper limit; Steps_set is the initial step count.",
         "# Conserved-quantity RMSE uses diagnostic samples after t=0, measured against the initial value.",
-        "# E_nRMSE = E_RMSE / (initial kinetic energy + abs(initial potential energy)).",
+        "# S=initial kinetic energy+abs(initial potential energy); E_nRMSE=E_RMSE/S; E_drift_k=OLS slope of E(t)-E(0) [energy/time]; E_drift_k_norm=E_drift_k/S [1/time].",
         "# Position_RMSE / Position_NRMSE compare with the selected batch reference; disabled or pending = NA.",
         "# Position metrics use a uniform time grid including t=0; previous-test comparisons are in batch_*_comparisons.dat.",
         "# reference_N marks the reference row; N counts completed other-test comparisons against it in the same batch.",
         "# _position_comparisons/*.json retain reference identity, interval, normalization and full-precision results.",
-        "# Adaptive_param is eta for Timescale or N for AccelerationRatio; K is only used by AccelerationRatio.",
-        "# NA: not used, unavailable, or undefined. Legacy timestamps are preserved as recorded.",
+        "# Adaptive_param is eta for Timescale or N for either ratio method; K is used by both global and local ratio modes.",
+        "# NA: unavailable/undefined. Device_model: recorded hardware model; legacy models use documented provenance.",
         "# Plot contains the image file URL for that row; NA means no saved figure is available.",
         "# URL clicking in this text file depends on the editor; index.html provides clickable Plot links.",
         "# Adaptive_param uses compact decimals (eta) or one decimal (N); other numbers use scientific notation; JSON retains stored precision.",
@@ -506,16 +699,30 @@ def _rebuild_run_history(directory=None):
              "information when available. Legacy CSV timestamps have unknown timezone.\n"
              "dt_initial is the chosen initial dt / adaptive maximum. Steps_set is ceil(Sim_T/dt_initial).\n"
              "Steps_actual counts completed integration steps, including a shortened final step.\n"
-             "Adaptive_method is NA, Timescale, or AccelerationRatio. Adaptive_param is eta for Timescale\n"
-             "or the acceleration trigger N for AccelerationRatio. K is the maximum cumulative\n"
-             "exponent, used only by AccelerationRatio. All three fields are NA for fixed dt.\n"
-             "Conserved-quantity RMSE excludes the initial sample and compares diagnostics against the initial value.\n"
+             "Adaptive_method is NA, Timescale, or AccelerationRatio (global). Adaptive_param is eta for Timescale\n"
+             "or the acceleration trigger N for AccelerationRatio; K is its maximum cumulative exponent.\n"
+             "All three fields are NA for fixed dt. Historical LocalAccelerationRatio rows describe a retired method.\n"
+             "New energy RMSE integrates squared E(t)-E(0) over all saved step intervals, using linear interpolation in time.\n"
+             "Energy statistics are identified by energy_error in each new JSON record; historical rows retain their original definitions.\n"
+             "Other conserved-quantity RMSE excludes the initial diagnostic sample and uses diagnostic records.\n"
              "Position_RMSE and Position_NRMSE use the selected batch reference and a common uniform time grid.\n"
              "Disabled, pending, or unavailable position metrics are NA; reference_N marks a reference and its completed comparison count.\n"
              "_position_comparisons/ stores comparison overlays without altering immutable original run records.\n"
              "Comparison definitions and previous-test results are in the companion batch JSON and comparison DAT.\n"
              "E_nRMSE divides energy RMSE by initial kinetic energy + abs(initial potential energy).\n"
+             "E_drift_k is the signed OLS slope of E(t)-E(0), in code energy/code time; a free intercept is fitted.\n"
+             "E_drift_k_norm divides that slope by initial kinetic energy + abs(initial potential energy), in 1/code time.\n"
+             "These are drift rates, not RMSE values. Positive/negative slopes describe upward/downward fitted trends.\n"
+             "A small slope alone does not prove conservation; compare fit quality and sensitivity to sampling.\n"
+             "Fits use uniform random physical times and interpolate the full saved energy trajectory.\n"
+             "Sampling count, seed, fit interval and residual statistics are retained in the run's energy_drift JSON.\n"
+             "Old records are displayed with slopes from their archived fit, or NA if no fit was saved.\n"
+             "The archived fit is retained when an interactive refit is saved separately; indexes do not silently replace it.\n"
              "P, L, and Vcm mean total momentum, total angular momentum, and center-of-mass velocity.\n"
+             "Device distinguishes CPU (dictionary), CPU_ARRAY_SINGLE, CPU_ARRAY_MULTI(nT), and GPU; n is the actual thread count.\n"
+             "Device_model identifies the processor used for computation, not display rendering.\n"
+             "Array CPU initialization/Numba compilation occurs before Compute_time_s; initialization_seconds is retained in NPZ metadata.\n"
+             "Historical hardware provenance is retained in each migrated JSON summary; unknown models remain NA.\n"
              "Compute_time_s is elapsed real time for the simulation loop and part of result preparation, in seconds.\n"
              "It excludes subsequent plotting and file saving; Sim_T is physical simulation time in code units.\n"
              "DAT and HTML display scientific notation rounded to six decimal places; JSON preserves\n"
@@ -606,7 +813,17 @@ def save_run_history(record, directory=None):
             row = _history_expand_row(record["row"])
             row[-1] = filename
             entry = _archive_publish_record(directory, {"run_id": run_id, "row": row,
-                                            "started_at": metadata["run_started_at"], "source": "simulation"})
+                                            "started_at": metadata["run_started_at"], "source": "simulation",
+                                            "device_model_source": "runtime hardware query",
+                                            "energy_error": metadata.get("energy_error"),
+                                            "energy_drift": energy_drift_summary(metadata["energy_drift"])
+                                                if "energy_drift" in metadata else None})
+        if "energy_drift" in metadata:
+            drift_path = directory / (Path(entry["row"][-1]).stem + "_energy_drift.json")
+            _archive_write(drift_path, json.dumps(
+                dict(run_id=run_id, analysis=metadata["energy_drift"]),
+                ensure_ascii=False, allow_nan=False, indent=2).encode("utf-8"), replace=False)
+            metadata["energy_drift_path"] = str(drift_path.resolve())
         path = rebuild_run_history(directory)
     record["row"][1] = entry["row"][1]
     record["row"][-1] = entry["row"][-1]
@@ -891,13 +1108,23 @@ class SimulationCancelled(Exception):
 def validate_config(config):
     """Validate parameters before computation to catch invalid input early."""
     result = dict(config)
-    result.setdefault("adaptive_algorithm", "timescale")
-    if result["adaptive_algorithm"] not in ("timescale", "acceleration_ratio"):
-        raise ValueError("Select the time-scale or acceleration-ratio algorithm.")
+    result.setdefault("adaptive_algorithm", "acceleration_ratio")
+    if result["adaptive_algorithm"] not in ADAPTIVE_ALGORITHMS:
+        raise ValueError("Select the time-scale or global acceleration-ratio algorithm. Local stepping has been removed.")
     result.setdefault("compute_backend", "cpu")
     result.setdefault("particle_count", 5)
-    if result["compute_backend"] not in ("cpu", "gpu"):
-        raise ValueError("Select CPU or GPU computation.")
+    if result["compute_backend"] not in COMPUTE_BACKENDS:
+        raise ValueError("Select dictionary CPU, array single-thread CPU, array multi-thread CPU, or GPU.")
+    try:
+        threads = result.get("cpu_threads", 0)
+        if isinstance(threads, bool):
+            raise ValueError
+        threads = float(threads)
+        if not np.isfinite(threads) or threads != int(threads) or not 0 <= threads <= 4096:
+            raise ValueError
+        result["cpu_threads"] = int(threads)
+    except (ValueError, TypeError, OverflowError):
+        raise ValueError("CPU threads must be an integer: 0 for automatic, or a positive thread count.") from None
     for key, title in (("dt", "Time step"), ("total_time", "Simulation duration")):
         try:
             result[key] = float(result[key])
@@ -942,7 +1169,7 @@ def validate_config(config):
             or result["acceleration_trigger_ratio"] <= 1):
         raise ValueError("The acceleration trigger ratio must be finite and greater than 1.")
     try:
-        power = float(result.get("acceleration_max_power", 3))
+        power = float(result.get("acceleration_max_power", 7))
         if not np.isfinite(power) or power < 1 or power != int(power):
             raise ValueError
         result["acceleration_max_power"] = int(power)
@@ -978,7 +1205,25 @@ def make_initial_state(config):
 
 
 def run_simulation(config, progress=None, cancel=None):
-    """Run one numerical simulation with callbacks, without accessing Tk widgets."""
+    """Run one simulation; optional CPU compilation never affects dictionary/GPU imports."""
+    config = validate_config(config)
+    if config["compute_backend"] in ("cpu_array", "cpu_parallel"):
+        if cancel is not None and cancel.is_set():
+            raise SimulationCancelled()
+        try:
+            from nbody_array_cpu import thread_scope
+        except ImportError as exc:
+            raise RuntimeError(
+                f"Array CPU requires Numba in this Python: {sys.executable}\n"
+                f'Install with: "{sys.executable}" -m pip install numba\n'
+                "You can still select the original dictionary CPU or GPU mode.") from exc
+        with thread_scope():
+            return _run_simulation_impl(config, progress, cancel)
+    return _run_simulation_impl(config, progress, cancel)
+
+
+def _run_simulation_impl(config, progress=None, cancel=None):
+    """Shared time stepping, diagnostics and recording for all four compute backends."""
     config = validate_config(config)
     stars = make_initial_state(config)
     initial_stars = copy.deepcopy(stars)
@@ -990,15 +1235,24 @@ def run_simulation(config, progress=None, cancel=None):
     nominal_steps = int(np.ceil(end_time / base_dt))
     if cancel is not None and cancel.is_set():
         raise SimulationCancelled()
-    gpu = (GPUState(stars, adaptive and adaptive_algorithm == "timescale")
-           if config["compute_backend"] == "gpu" else None)
-    energy_scale = (gpu.energy_scale if gpu is not None else
+    setup_started = time.perf_counter()
+    state = None
+    if config["compute_backend"] == "gpu":
+        state = GPUState(stars, adaptive and adaptive_algorithm == "timescale")
+    elif config["compute_backend"] in ("cpu_array", "cpu_parallel"):
+        from nbody_array_cpu import ArrayCPUState
+        state = ArrayCPUState(stars, gravity=G,
+                              parallel=config["compute_backend"] == "cpu_parallel",
+                              threads=config["cpu_threads"],
+                              adaptive=adaptive and adaptive_algorithm == "timescale")
+        state.device_name = cpu_model_name()
+    energy_scale = (state.energy_scale if state is not None else
                     sum(Ek(s) for s in stars) - sum(
                         Ep(stars[i], stars[j]) for i in range(len(stars)) for j in range(i + 1, len(stars))))
     trajectories = [[s["pos"].copy()] for s in stars]
     velocities = [np.array([s["v"].copy() for s in stars])]
-    accelerations = [gpu.host_acceleration if gpu is not None else net_accelerations(stars)]
-    diagnostics = [gpu.diagnostics() if gpu is not None else test(stars)]
+    accelerations = [state.host_acceleration if state is not None else net_accelerations(stars)]
+    diagnostics = [state.diagnostics() if state is not None else test(stars)]
     energies = [diagnostics[0]["energy"]]
     times, step_sizes, diagnostic_times = [0.0], [0.0], [0.0]
     minimum_dt = max(base_dt * 1e-10, np.nextafter(0.0, 1.0))
@@ -1018,8 +1272,8 @@ def run_simulation(config, progress=None, cancel=None):
         minimum_dt = ratio_floor_dt
     integrator = leapfrog if config["method"] == "1" else rk4
     def advance_state(h):
-        if gpu is not None:
-            return gpu.advance(h, config["method"])
+        if state is not None:
+            return state.advance(h, config["method"])
         with np.errstate(divide="raise", invalid="raise", over="raise"):
             acceleration = (integrator(stars, h, initial_acceleration=accelerations[-1])
                             if ratio_mode else integrator(stars, h))
@@ -1029,6 +1283,8 @@ def run_simulation(config, progress=None, cancel=None):
             raise RuntimeError("The simulation produced non-finite values. Reduce dt or check close encounters.")
         return acceleration, energy
 
+    device_name = state.device_name if state is not None else cpu_model_name()
+    initialization_seconds = time.perf_counter() - setup_started
     started = last_report = time.perf_counter()
     if progress:
         progress(0.0, 0, 0.0, 0.0)
@@ -1045,7 +1301,7 @@ def run_simulation(config, progress=None, cancel=None):
                     ratio_shrink_count += proposal < previous_proposal
                     ratio_grow_count += proposal > previous_proposal
             else:
-                proposal = (gpu.propose_step(base_dt, eta, previous_proposal) if gpu is not None
+                proposal = (state.propose_step(base_dt, eta, previous_proposal) if state is not None
                             else adaptive_step_size(stars, base_dt, eta, previous_proposal))
             if not np.isfinite(proposal) or proposal < minimum_dt:
                 raise RuntimeError(
@@ -1070,10 +1326,10 @@ def run_simulation(config, progress=None, cancel=None):
         new_acceleration, energy = advance_state(h)
         current_time = new_time
         steps += 1
-        if gpu is not None:
+        if state is not None:
             for i in range(len(stars)):
-                trajectories[i].append(gpu.host_pos[i].copy())
-            velocities.append(gpu.host_vel)
+                trajectories[i].append(state.host_pos[i].copy())
+            velocities.append(state.host_vel)
         else:
             for i, star in enumerate(stars):
                 trajectories[i].append(star["pos"].copy())
@@ -1085,7 +1341,7 @@ def run_simulation(config, progress=None, cancel=None):
         should_sample = ((steps % sample_every == 0 or current_time == end_time)
                          if ratio_mode else current_time == next_sample_time)
         if should_sample:
-            diagnostics.append(gpu.diagnostics() if gpu is not None else test(stars))
+            diagnostics.append(state.diagnostics() if state is not None else test(stars))
             diagnostic_times.append(current_time)
             if not ratio_mode:
                 sample_number += 1
@@ -1107,7 +1363,12 @@ def run_simulation(config, progress=None, cancel=None):
         "method_id": config["method"],
         "method_name": {"1": "Leapfrog (KDK)", "2": "Runge-Kutta 4th order"}[config["method"]],
         "compute_backend": config["compute_backend"],
-        "device_name": gpu.device_name if gpu is not None else "CPU",
+        "compute_device": "GPU" if config["compute_backend"] == "gpu" else "CPU",
+        "cpu_threads": state.thread_count if config["compute_backend"] in ("cpu_array", "cpu_parallel") else None,
+        "cpu_threads_requested": config["cpu_threads"] if config["compute_backend"] == "cpu_parallel" else None,
+        "array_cpu_runtime": "Numba; float64; fastmath=False" if config["compute_backend"] in ("cpu_array", "cpu_parallel") else None,
+        "initialization_seconds": initialization_seconds,
+        "device_name": device_name,
         "dtype": "float64", "particle_count": len(stars),
         "G": G, "dt": base_dt, "steps": steps, "requested_steps": nominal_steps,
         "simulation_end_time": end_time,
@@ -1154,11 +1415,72 @@ def run_simulation(config, progress=None, cancel=None):
                                       if ratio_mode else "fixed physical-time intervals",
         "config": config, "elapsed_seconds": time.perf_counter() - started,
     }
+    # Post-processing is deliberately outside the integration compute timer.
+    metadata["energy_error"] = time_weighted_energy_error(times, energies, energy_scale)
+    metadata["energy_drift"] = fit_energy_drift(times, energies, energy_scale)
     return dict(trajectories=trajectories, accelerations=np.asarray(accelerations),
                 velocities=np.asarray(velocities), energies=np.asarray(energies), time_step=base_dt,
                 diagnostic_times=np.asarray(diagnostic_times), diagnostics=diagnostics,
                 metadata=metadata, record_times=np.asarray(times), step_sizes=np.asarray(step_sizes))
 
+
+
+def fit_energy_drift(times, energies, energy_scale, sample_count=1000, seed=0):
+    """OLS of E(t)-E(0) at reproducible random physical times.
+
+    Uniform time sampling avoids overweighting dense adaptive-step records.
+    Interpolation describes the saved trajectory, not unrecorded dynamics.
+    This descriptive slope is not a conservation test or an uncertainty bound.
+    """
+    times = np.asarray(times, dtype=np.float64)
+    energies = np.asarray(energies, dtype=np.float64)
+    if (times.ndim != 1 or energies.shape != times.shape or len(times) < 2
+            or not np.isfinite(times).all() or not np.isfinite(energies).all()
+            or np.any(np.diff(times) <= 0)):
+        raise ValueError("Drift analysis requires at least two finite, strictly increasing time records.")
+    if isinstance(sample_count, (bool, np.bool_)) or int(sample_count) != sample_count or not 3 <= sample_count <= 100000:
+        raise ValueError("Random sample count must be an integer from 3 to 100000.")
+    if isinstance(seed, (bool, np.bool_)) or int(seed) != seed or not 0 <= seed <= 4294967295:
+        raise ValueError("Sampling seed must be an integer from 0 to 4294967295.")
+    count, seed = int(sample_count), int(seed)
+    span = float(times[-1] - times[0])
+    rng = np.random.default_rng(seed)
+    sample_times = np.sort(rng.uniform(float(times[0]), float(times[-1]), count))
+    # Subtract first to avoid losing small offsets when fitting a large baseline.
+    sample_offsets = np.interp(sample_times, times, energies - energies[0])
+    scaled_times = (sample_times - times[0]) / span
+    centered_times = scaled_times - np.mean(scaled_times)
+    centered_offsets = sample_offsets - np.mean(sample_offsets)
+    denominator = float(np.dot(centered_times, centered_times))
+    if denominator <= 0:
+        raise ValueError("Sampled times have insufficient distinct values for a fit.")
+    delta = float(np.dot(centered_times, centered_offsets) / denominator)
+    slope = delta / span
+    intercept = float(np.mean(sample_offsets) - delta * np.mean(scaled_times))
+    fitted = intercept + delta * scaled_times
+    residual_rmse = float(np.sqrt(np.mean((sample_offsets - fitted)**2)))
+    sst = float(np.dot(centered_offsets, centered_offsets))
+    r_squared = float(1 - np.sum((sample_offsets - fitted)**2) / sst) if sst > 0 else None
+    scale = float(energy_scale)
+    normalized_slope = slope / scale if np.isfinite(scale) and scale > 0 else None
+    normalized_delta = delta / scale if np.isfinite(scale) and scale > 0 else None
+    return dict(version=1, method="ordinary least squares; free intercept",
+                sampling="uniform random physical times; linear interpolation of full saved energies",
+                sample_count=count, seed=seed, rng="numpy.default_rng PCG64",
+                source_records=int(len(times)), time_start=float(times[0]), time_end=float(times[-1]),
+                initial_energy=float(energies[0]), energy_scale=scale if np.isfinite(scale) else None,
+                slope=slope, intercept_offset_at_start=intercept,
+                fitted_energy_change=delta, normalized_slope=normalized_slope,
+                normalized_fitted_energy_change=normalized_delta,
+                residual_rmse=residual_rmse, r_squared=r_squared,
+                slope_units="code energy / code time", normalized_slope_units="1 / code time",
+                sample_times=sample_times.tolist(), sample_energy_offsets=sample_offsets.tolist())
+
+
+def energy_drift_summary(result):
+    """Keep the archive summary compact; samples remain in result metadata/JSON."""
+    return {key: value for key, value in result.items()
+            if key not in ("sample_times", "sample_energy_offsets")}
 
 
 def plot_sample_indices(values, max_points=4000):
@@ -1172,6 +1494,48 @@ def plot_sample_indices(values, max_points=4000):
         chunk = values[start:min(start + width, count - 1)]
         keep.extend((start + int(np.argmin(chunk)), start + int(np.argmax(chunk))))
     return np.unique(keep)
+
+
+def energy_display_records(times, energies):
+    """Add shared interpolated zero-crossing vertices for both E and delta-E views.
+
+    These vertices are display interpolation, not additional integration states.
+    """
+    t, e = np.asarray(times), np.asarray(energies)
+    d = e - e[0]
+    crossings = np.flatnonzero(((d[:-1] < 0) & (d[1:] > 0)) |
+                              ((d[:-1] > 0) & (d[1:] < 0)))
+    fraction = np.abs(d[crossings]) / (np.abs(d[crossings]) + np.abs(d[crossings+1]))
+    roots = t[crossings] + fraction * (t[crossings+1] - t[crossings])
+    return (np.insert(t, crossings+1, roots),
+            np.insert(e, crossings+1, e[0]), np.insert(d, crossings+1, 0.))
+
+
+def viewport_series(times, values, limits, sampling_values=None, preserve_zero=False, steps=False):
+    """Full records inside a zoomed time window, plus one neighbor on either side."""
+    t, y = np.asarray(times), np.asarray(values)
+    sample = y if sampling_values is None else np.asarray(sampling_values)
+    lo, hi = sorted(limits)
+    start = max(0, int(np.searchsorted(t, lo, side="left")) - 1)
+    stop = min(len(t), int(np.searchsorted(t, hi, side="right")) + 1)
+    if lo <= t[0] and hi >= t[-1]:
+        finite = np.isfinite(sample)
+        indices = plot_sample_indices(np.where(finite, sample, 0.))
+        if steps:
+            changes = np.flatnonzero(sample[1:] != sample[:-1])
+            indices = np.unique(np.r_[0, len(t)-1, changes, changes+1])
+        gaps = np.flatnonzero(finite[1:] != finite[:-1])
+        keep = [indices, gaps, gaps+1]
+        if preserve_zero:
+            # Retain zero-region boundaries and their neighbors without keeping a
+            # million identical zero samples in a flat full-range overview.
+            zero = sample == 0
+            edges = np.flatnonzero(zero[1:] != zero[:-1])
+            keep.extend([edges, edges+1])
+        indices = np.unique(np.concatenate(keep))
+    else:
+        indices = np.arange(start, stop)
+    return t[indices], y[indices]
 
 
 def full_time_statistics(values, times):
@@ -1189,6 +1553,10 @@ def full_time_statistics(values, times):
 
 
 def statistics_label(stats, quantity):
+    if quantity == "ΔE":
+        # Show small signed differences directly, without the large E(0) baseline.
+        return (f"Max ΔE: {stats['max']:+.7e}\nMin ΔE: {stats['min']:+.7e}"
+                f"\nTime mean ΔE: {stats['mean']:+.7e}")
     return (f"Max: {stats['max']:.5e}\nMin: {stats['min']:.5e}"
             f"\nTime mean: {stats['mean']:.5e}")
 
@@ -1317,7 +1685,7 @@ class NBodyViewer:
                                      f" · dt max = {self.dt:g}")
         else:
             self.mode_description = f"Time-scale method · dt max = {self.dt:g} · eta = {metadata['adaptive_eta']:g}"
-        self.mode_description += f" · {metadata.get('compute_backend', 'cpu').upper()} · float64"
+        self.mode_description += f" · {backend_summary(metadata)} · float64"
         if (self.times.shape != (self.frame_count,) or not np.isfinite(self.times).all()
                 or self.times[0] != 0 or np.any(np.diff(self.times) <= 0)):
             raise ValueError("Cumulative times must start at zero, increase strictly, and match the trajectory records.")
@@ -1330,6 +1698,14 @@ class NBodyViewer:
             raise ValueError("Velocity records must match every star and trajectory time.")
         if self.energies.shape != (self.frame_count,):
             raise ValueError("Energy records must match trajectory times.")
+        self.energy_error = time_weighted_energy_error(self.times, self.energies, metadata["energy_scale"])
+        self.metadata["energy_error"] = self.energy_error
+        self.energy_plot_times, self.energy_plot_values, self.energy_plot_offsets = energy_display_records(
+            self.times, self.energies)
+        self.energy_display_offset = None
+        self.time_series = {}
+        self.viewport_axes = set()
+        self.updating_viewport = False
 
         self.root = root if root is not None else tk.Tk()
         width = min(1600, self.root.winfo_screenwidth() - 60)
@@ -1460,7 +1836,7 @@ class NBodyViewer:
         ttk.Separator(sidebar).pack(fill="x", pady=10)
         ttk.Button(sidebar, text="Save current page (PNG)", command=self.save_image).pack(fill="x", pady=3)
         ttk.Button(sidebar, text="Save all-star data (NPZ)", command=self.save_data).pack(fill="x", pady=3)
-        ttk.Label(sidebar, text="Save on demand. Long series use fewer plotted points; hover and data export use complete records.",
+        ttk.Label(sidebar, text="Full-range plots use fewer points. Zooming in time shows every record in view; hover and exports use original records.",
                   style="Note.TLabel", wraplength=260).pack(anchor="w", pady=5)
 
         display = self.display = ttk.Frame(body)
@@ -1484,6 +1860,7 @@ class NBodyViewer:
         self.notebook.add(self.diagnostics_tab, text="Conservation & Errors")
         self.build_overview()
         self.build_diagnostics()
+        self.build_energy_drift()
         self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_change)
 
         self.owns_timeline = timeline is None
@@ -1546,6 +1923,34 @@ class NBodyViewer:
         canvas.mpl_connect("button_release_event", self.on_plot_release)
         return canvas, toolbar
 
+    def set_time_series(self, line, times, values, sampling_values=None, preserve_zero=False):
+        axis = line.axes
+        if axis.get_autoscalex_on():
+            axis.set_xlim(times[0], times[-1])
+        steps = line.get_drawstyle().startswith("steps")
+        self.time_series[line] = (np.asarray(times), np.asarray(values), sampling_values, preserve_zero, steps)
+        if axis not in self.viewport_axes:
+            axis.callbacks.connect("xlim_changed", self.on_time_view_changed)
+            self.viewport_axes.add(axis)
+        line.set_data(*viewport_series(times, values, axis.get_xlim(), sampling_values, preserve_zero, steps))
+        line.get_path().should_simplify = False
+
+    def on_time_view_changed(self, changed_axis):
+        if self.updating_viewport:
+            return
+        self.updating_viewport = True
+        try:
+            siblings = changed_axis.get_shared_x_axes().get_siblings(changed_axis)
+            # Shared axes callbacks can run before siblings receive their limits.
+            # Use the emitting axis's limits for every curve in that shared group.
+            for line, (times, values, sample, zero, steps) in self.time_series.items():
+                if line.axes in siblings:
+                    line.set_data(*viewport_series(times, values, changed_axis.get_xlim(), sample, zero, steps))
+                    line.get_path().should_simplify = False
+            changed_axis.figure.canvas.draw_idle()
+        finally:
+            self.updating_viewport = False
+
     def apply_figure_layout(self, figure, width, height, for_export=False):
         """Use compact screen text while keeping the original font sizes for export."""
         diagnostic = figure is getattr(self, "diagnostic_figure", None)
@@ -1590,7 +1995,7 @@ class NBodyViewer:
             compact_mode = f"eta={self.metadata['adaptive_eta']:g}; dt_max={self.dt:g}"
         self.figure_caption = (f"{self.metadata['case_name']}\n"
                                f"{self.metadata['method_name']} | N={self.n} | {compact_mode} | "
-                               f"{self.metadata.get('compute_backend', 'cpu').upper()} | steps={self.last_step:,}")
+                               f"{backend_summary(self.metadata)} | steps={self.last_step:,}")
         self.figure.suptitle(self.figure_caption, fontsize=9)
         grid = self.figure.add_gridspec(2, 2, width_ratios=(1.0, 1.45))
         self.orbit_axes = self.figure.add_subplot(grid[:, 0], projection="3d")
@@ -1657,24 +2062,14 @@ class NBodyViewer:
         self.register_hover(self.acceleration_axes, self.times, {})
         self.canvas, self.toolbar = self.embed_figure(self.figure, self.overview_tab)
 
-    def step_plot_data(self):
+    def step_plot_data(self, axis=None):
         """Map h[n] to (t[n-1], t[n]]; omit the initial zero marker from the log axis."""
-        if self.adaptive and self.metadata.get("adaptive_algorithm") == "acceleration_ratio":
-            # Keep every dt change and its preceding point; steps-pre shows the correct active interval.
-            changes = np.flatnonzero(np.diff(self.step_sizes[1:]) != 0) + 1
-            indices = np.unique(np.r_[0, len(self.step_sizes) - 2, changes - 1, changes]) + 1
-        else:
-            indices = plot_sample_indices(self.step_sizes[1:]) + 1
-        # Extend the first real step back to t=0. The stored h[0]=0 is only
-        # an initial-state marker, not an actual zero-size integration step.
-        times = np.r_[self.times[0], self.times[indices]]
-        steps = np.r_[self.step_sizes[1], self.step_sizes[indices]]
-        return times, steps
+        return self.times, np.r_[self.step_sizes[1], self.step_sizes[1:]]
 
     def add_step_size_axis(self, axis, base, show_ratio_levels=False):
-        times, steps = self.step_plot_data()
+        times, steps = self.step_plot_data(axis)
         color = "#b45309"
-        low, high = float(np.min(self.step_sizes[1:])), float(np.max(self.step_sizes[1:]))
+        low, high = float(np.min(steps)), float(np.max(steps))
         padding = max((np.log(high) - np.log(low)) * .08, np.log(1.5))
         y_low = max(np.nextafter(0., 1.), np.exp(max(np.log(np.nextafter(0., 1.)), np.log(low) - padding)))
         y_high = np.exp(min(np.log(np.finfo(float).max), np.log(high) + padding))
@@ -1682,6 +2077,7 @@ class NBodyViewer:
         line, = right.plot(times, steps, color=color, linestyle="--",
                            linewidth=1.15, alpha=.85, drawstyle="steps-pre",
                            label="Actual dt")
+        self.set_time_series(line, times, steps)
         right.set_yscale("log", base=base)
         right.set_ylabel(f"log DT", color=color, fontsize=9, labelpad=7)
         right.tick_params(axis="y", colors=color, labelsize=8)
@@ -1743,23 +2139,24 @@ class NBodyViewer:
         self.diagnostic_statistics_text = self.diagnostic_info_axes.text(
             1, .98, "", ha="right", va="top", fontsize=8, linespacing=1.2)
 
-        values = np.array([item["energy"] for item in self.diagnostics])
+        values = self.energies
         self.diagnostic_energy_axes = energy_axis
         self.diagnostic_energy_values = values
         self.diagnostic_energy_line, = energy_axis.plot(
-            self.diagnostic_times, values, color="#172435", linewidth=1, label="E")
+            self.times, values, color="#172435", linewidth=1, label="E")
         self.diagnostic_energy_reference = energy_axis.axhline(
             self.energies[0], color="#8a94a3", linestyle="--", linewidth=.9, label="Initial energy E(0)")
         self.add_step_size_axis(energy_axis, base=10.0)
         self.update_overview_legend(energy_axis, ncol=3)
-        error = float(RMSE(values))
+        error = self.energy_error["rmse"]
         scale = self.metadata["energy_scale"]
         normalized = error / scale if scale else np.nan
-        self.diagnostic_energy_error_label = f"RMSE = {error:.5e}    Normalized RMSE = {normalized:.5e}"
+        self.diagnostic_energy_error_label = (
+            f"Time-weighted RMSE = {error:.5e}    NRMSE = {normalized:.5e} | all {len(self.times):,} records")
 
         energy_axis.set_ylabel("E")
         energy_axis.grid(alpha=.22)
-        self.register_hover(energy_axis, self.diagnostic_times, {"E": values})
+        self.register_hover(energy_axis, self.times, {"E": values})
         self.diagnostic_cursors.append(energy_axis.axvline(0, color="#de8a28", linewidth=.8))
         vector_info = [
             ("momentum", "Total momentum", "P"),
@@ -1772,7 +2169,8 @@ class NBodyViewer:
                                                     ("z", "tab:blue"), ("Magnitude", "tab:purple"))):
                 series = values[:, col] if col < 3 else np.linalg.norm(values, axis=1)
                 axis = self.diagnostic_figure.add_subplot(grid[row, col], sharex=energy_axis)
-                axis.plot(self.diagnostic_times, series, color=color, linewidth=1)
+                line, = axis.plot(self.diagnostic_times, series, color=color, linewidth=1)
+                self.set_time_series(line, self.diagnostic_times, series)
                 axis.set_title(f"{title}：{suffix}\nRMSE = {float(RMSE(series)):.5e}", fontsize=8)
                 # Shared time coordinates need labels only on the bottom row.
                 axis.set_xlabel("Time (code units)" if row == 4 else "", fontsize=8)
@@ -1787,9 +2185,103 @@ class NBodyViewer:
         energy_axis.tick_params(labelsize=7, axis="both")
         energy_axis.tick_params(axis="x", labelbottom=False)
         energy_axis.xaxis.set_major_locator(MaxNLocator(nbins=5))
-        energy_axis.yaxis.set_major_locator(MaxNLocator(nbins=4))
+        set_physical_log_scale(energy_axis, self.diagnostic_energy_values)
         self.diagnostic_canvas, self.diagnostic_toolbar = self.embed_figure(
             self.diagnostic_figure, self.diagnostics_tab)
+
+    def build_energy_drift(self):
+        self.drift_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.drift_tab, text="Energy drift")
+        self.drift_result = self.metadata.get("energy_drift")
+        if self.drift_result is None:
+            self.drift_result = fit_energy_drift(self.times, self.energies, self.metadata["energy_scale"])
+        self.metadata["energy_drift"] = self.drift_result
+        bar = ttk.Frame(self.drift_tab, padding=(6, 4))
+        bar.pack(fill="x")
+        self.drift_count_var = tk.StringVar(value=str(self.drift_result["sample_count"]))
+        self.drift_seed_var = tk.StringVar(value=str(self.drift_result["seed"]))
+        ttk.Label(bar, text="Random samples:").grid(row=0, column=0, sticky="w")
+        ttk.Entry(bar, textvariable=self.drift_count_var, width=9).grid(row=0, column=1, padx=(4, 14))
+        ttk.Label(bar, text="Sampling seed:").grid(row=0, column=2)
+        ttk.Entry(bar, textvariable=self.drift_seed_var, width=12).grid(row=0, column=3, padx=4)
+        ttk.Button(bar, text="Refit", command=self.refit_energy_drift).grid(row=0, column=4, padx=6)
+        ttk.Button(bar, text="Save fit JSON", command=self.save_energy_drift).grid(row=1, column=0, columnspan=2, sticky="w")
+        ttk.Button(bar, text="Save plot PNG", command=self.save_image).grid(row=1, column=2, columnspan=2, sticky="w")
+        note = ttk.Label(self.drift_tab, style="Note.TLabel", justify="left",
+                        text="Uniform random physical times; energy is interpolated from saved records. "
+                             "The fit always uses E(t) - E(0), with a free intercept; the symlog axis changes display only.\n"
+                             "Positive slope: energy increases; negative: decreases. Near-zero slope alone does not imply conservation.",
+                        wraplength=900)
+        note.pack(fill="x", padx=8, pady=(0, 4))
+        self.drift_tab.bind("<Configure>", lambda event: note.configure(wraplength=max(300, event.width - 20)))
+        self.drift_figure = Figure(figsize=(12, 7), dpi=100, constrained_layout=True)
+        grid = self.drift_figure.add_gridspec(2, 1, height_ratios=(.34, 1))
+        info = self.drift_figure.add_subplot(grid[0]); info.set_axis_off()
+        self.drift_summary_text = info.text(0, .97, "", va="top", fontsize=9, linespacing=1.5)
+        self.drift_axes = self.drift_figure.add_subplot(grid[1])
+        offsets = self.energies - self.energies[0]
+        recorded_line, = self.drift_axes.plot([], [], color="#8a94a3",
+                                               linewidth=1, label="Recorded energy offset")
+        self.set_time_series(recorded_line, self.energy_plot_times, self.energy_plot_offsets,
+                             preserve_zero=True)
+        self.drift_points, = self.drift_axes.plot([], [], linestyle="none", marker=".",
+                                                 markersize=3, alpha=.55, color="#db8a22", label="Random samples")
+        self.drift_line, = self.drift_axes.plot([], [], color="#bb3040", linewidth=1.7, label="Linear fit")
+        self.drift_axes.axhline(0, color="#687485", linestyle=":", linewidth=.7, label="Initial energy offset")
+        self.drift_axes.set_xlabel("Time (code units)")
+        self.drift_axes.set_ylabel("E(t) - E(0) (code energy; symlog)")
+        self.drift_axes.grid(alpha=.22)
+        set_physical_log_scale(self.drift_axes, offsets)
+        info.legend(*self.drift_axes.get_legend_handles_labels(), loc="lower left",
+                    ncol=2, fontsize=8, frameon=False)
+        self.drift_canvas, self.drift_toolbar = self.embed_figure(self.drift_figure, self.drift_tab)
+        self.update_drift_plot()
+
+    def update_drift_plot(self):
+        result = self.drift_result
+        times = np.asarray(result["sample_times"])
+        offsets = np.asarray(result["sample_energy_offsets"])
+        ends = np.array([result["time_start"], result["time_end"]])
+        fit_times = np.linspace(ends[0], ends[1], 257)
+        fitted = result["intercept_offset_at_start"] + result["slope"] * (fit_times - ends[0])
+        self.drift_points.set_data(times, offsets)
+        self.drift_line.set_data(fit_times, fitted)
+        set_physical_log_scale(self.drift_axes, np.r_[self.energies-self.energies[0], fitted])
+        def number(value):
+            return "NA" if value is None else f"{value:.6e}"
+        self.drift_summary_text.set_text(
+            f"Random-time energy drift fit | samples = {result['sample_count']:,} | seed = {result['seed']}\n"
+            f"Slope k = {number(result['slope'])} energy/time | normalized k = {number(result['normalized_slope'])} /time\n"
+            f"Fitted change k*T = {number(result['fitted_energy_change'])} | normalized change = {number(result['normalized_fitted_energy_change'])}\n"
+            f"Offset intercept = {number(result['intercept_offset_at_start'])} | residual RMSE = {number(result['residual_rmse'])} | R-squared = {number(result['r_squared'])}")
+        self.drift_axes.relim(); self.drift_axes.autoscale_view()
+        predicted = result["intercept_offset_at_start"] + result["slope"] * (times - ends[0])
+        self.register_hover(self.drift_axes, times, {"Sample ΔE": offsets, "Fit ΔE": predicted}, "Energy drift samples")
+        self.drift_canvas.draw_idle()
+
+    def refit_energy_drift(self):
+        try:
+            result = fit_energy_drift(self.times, self.energies, self.metadata["energy_scale"],
+                                      int(self.drift_count_var.get()), int(self.drift_seed_var.get()))
+        except (ValueError, OverflowError) as exc:
+            messagebox.showerror("Invalid drift settings", str(exc), parent=self.root)
+            return
+        self.drift_result = result
+        self.metadata["energy_drift"] = result
+        self.update_drift_plot()
+        self.status_var.set("Drift fit updated. Save fit JSON to retain these settings; archived default summaries are unchanged.")
+
+    def save_energy_drift(self):
+        path = self.choose_save_path(".json", "Energy drift analysis", "_energy_drift")
+        if not path:
+            return
+        try:
+            payload = dict(run_id=self.metadata.get("run_id"), case_name=self.metadata.get("case_name"),
+                           method=self.metadata.get("method_name"), analysis=self.drift_result)
+            _archive_write(Path(path), json.dumps(payload, ensure_ascii=False, allow_nan=False, indent=2).encode("utf-8"))
+            self.status_var.set(f"Drift fit and sampled values saved: {path}")
+        except Exception as exc:
+            messagebox.showerror("Save failed", str(exc), parent=self.root)
 
     def register_hover(self, axis, times, series, title=None):
         if axis in getattr(self, "step_axes", {}):
@@ -1852,39 +2344,63 @@ class NBodyViewer:
     def refresh_energy(self):
         offset = self.delta_energy_var.get()
         values = self.energies - self.energies[0] if offset else self.energies
-        indices = plot_sample_indices(values)
-        self.energy_line.set_data(self.times[indices], values[indices])
+        old_offset = self.energy_display_offset
+        plot_values = self.energy_plot_offsets if offset else self.energy_plot_values
+        saved_limits = {}
+        for axis in (self.energy_axes, self.diagnostic_energy_axes):
+            if old_offset is not None and not axis.get_autoscaley_on():
+                shift = (float(old_offset) - float(offset)) * self.energies[0]
+                saved_limits[axis] = np.asarray(axis.get_ylim()) + shift
+        self.set_time_series(self.energy_line, self.energy_plot_times, plot_values,
+                             self.energy_plot_offsets, preserve_zero=True)
         label = "ΔE" if offset else "E"
         self.energy_line.set_label(label)
         reference = 0 if offset else self.energies[0]
         self.energy_reference.set_ydata([reference, reference])
-        self.energy_reference.set_label("Initial")
+        self.energy_reference.set_label("ΔE = 0" if offset else "E(0)")
         self.energy_title_text.set_text("Energy offset ΔE" if offset else "Total energy E")
-        self.energy_statistics = full_time_statistics(values, self.times)
-        self.energy_statistics_text.set_text(statistics_label(self.energy_statistics, label))
-        self.energy_axes.set_ylabel(f"{label} (code units)", fontsize=9)
+        # Always report signed offsets from E(0), including in absolute-energy view.
+        self.energy_statistics = full_time_statistics(self.energies - self.energies[0], self.times)
+        self.energy_statistics_text.set_text(statistics_label(self.energy_statistics, "ΔE"))
+        set_physical_log_scale(self.energy_axes, values)
+        self.energy_axes.set_ylabel(f"{label} (code units; symlog)", fontsize=9)
         self.energy_axes.relim(); self.energy_axes.autoscale_view(scalex=False)
+        if self.energy_axes in saved_limits:
+            self.energy_axes.set_ylim(saved_limits[self.energy_axes])
         self.update_overview_legend(self.energy_axes)
-        self.register_hover(self.energy_axes, self.times, {label: values}, "Energy offset" if offset else "Total energy")
+        hover = {"E": self.energies, "E(0)": np.broadcast_to(self.energies[0], self.energies.shape),
+                 "ΔE": self.energies - self.energies[0]}
+        self.register_hover(self.energy_axes, self.times, hover,
+                            "Recorded energy (crossing vertices are interpolated)")
         if hasattr(self, "diagnostic_energy_line"):
             diagnostic_values = self.diagnostic_energy_values - self.energies[0] if offset else self.diagnostic_energy_values
-            self.diagnostic_energy_line.set_ydata(diagnostic_values)
+            self.set_time_series(self.diagnostic_energy_line, self.energy_plot_times, plot_values,
+                                 self.energy_plot_offsets, preserve_zero=True)
             self.diagnostic_energy_line.set_label("Energy offset" if offset else "Energy")
             self.diagnostic_energy_reference.set_ydata([reference, reference])
             self.diagnostic_energy_reference.set_label("Initial offset = 0" if offset else "Initial energy")
             axis = self.diagnostic_energy_axes
-            axis.set_ylabel(label)
+            set_physical_log_scale(axis, diagnostic_values)
+            axis.set_ylabel(f"{label} (symlog)")
             self.diagnostic_title_text.set_text("Energy offset ΔE = E(t) - E(0)" if offset else "Total energy E(t)")
             self.diagnostic_error_text.set_text(self.diagnostic_energy_error_label)
-            self.diagnostic_statistics_text.set_text(statistics_label(self.energy_statistics, label))
+            self.diagnostic_statistics_text.set_text(statistics_label(self.energy_statistics, "ΔE"))
             axis.relim(); axis.autoscale_view(scalex=False)
+            if axis in saved_limits:
+                axis.set_ylim(saved_limits[axis])
             self.update_overview_legend(axis, ncol=3)
-            self.register_hover(axis, self.diagnostic_times, {label: diagnostic_values},
-                                "Energy offset" if offset else "Total energy")
+            self.register_hover(axis, self.times, hover, "Recorded energy (crossing vertices are interpolated)")
             self.apply_figure_layout(self.diagnostic_figure, *self.diagnostic_figure.bbox.size)
             self.diagnostic_canvas.draw_idle()
         self.apply_figure_layout(self.figure, *self.figure.bbox.size)
         self.canvas.draw_idle()
+        self.energy_display_offset = bool(offset)
+        # Old toolbar history contains y limits in the other energy coordinates.
+        # Rebase Home/Back/Forward on the current view after a mode change.
+        if old_offset is not None and bool(old_offset) != bool(offset):
+            for toolbar in (self.toolbar, self.diagnostic_toolbar):
+                toolbar.update()
+                toolbar.push_current()
 
     def refresh_acceleration(self):
         vectors = self.accelerations[:, self.star_index, :]
@@ -1892,18 +2408,20 @@ class NBodyViewer:
         series = {"|a|": self.selected_magnitudes}
         for col, key in enumerate(("x", "y", "z")):
             values = vectors[:, col]
-            indices = plot_sample_indices(values)
             line = self.acceleration_lines[key]
-            line.set_data(self.times[indices], values[indices])
+            self.set_time_series(line, self.times, values)
             line.set_visible(self.components_var.get())
             if self.components_var.get():
                 series[f"a_{key}"] = values
-        indices = plot_sample_indices(self.selected_magnitudes)
-        self.acceleration_lines["magnitude"].set_data(self.times[indices],
-                                                      self.selected_magnitudes[indices])
+        self.set_time_series(self.acceleration_lines["magnitude"], self.times, self.selected_magnitudes)
         self.acceleration_title_text.set_text(f"Star {self.star_index + 1}: |a|")
         self.acceleration_statistics = full_time_statistics(self.selected_magnitudes, self.times)
         self.acceleration_statistics_text.set_text(statistics_label(self.acceleration_statistics, "|a|"))
+        scale = set_physical_log_scale(
+            self.acceleration_axes,
+            np.concatenate(list(series.values())),
+            positive_only=not self.components_var.get())
+        self.acceleration_axes.set_ylabel(f"Net acceleration (code units; {scale})", fontsize=9)
         self.acceleration_axes.relim(visible_only=True)
         self.acceleration_axes.autoscale_view(scalex=False)
         visible_lines = [line for line in self.acceleration_lines.values() if line.get_visible()]
@@ -2003,6 +2521,9 @@ class NBodyViewer:
             line.set_xdata([current_time, current_time])
         acceleration = self.accelerations[self.step, self.star_index]
         velocity = self.velocities[self.step, self.star_index]
+        a_along_v, v_along_a = velocity_acceleration_projections(acceleration, velocity)
+        a_projection_text = f"{a_along_v:.8e}" if np.isfinite(a_along_v) else "undefined (|v| = 0)"
+        v_projection_text = f"{v_along_a:.8e}" if np.isfinite(v_along_a) else "undefined (|a| = 0)"
         self.details_var.set(
             f"Star {self.star_index + 1} · t = {current_time:.8g}\n"
             + (f"Step dt = {self.step_sizes[self.step]:.8e}\n" if self.step else "Initial state\n") +
@@ -2014,6 +2535,8 @@ class NBodyViewer:
             f"v_y = {velocity[1]:.8e}\n"
             f"v_z = {velocity[2]:.8e}\n"
             f"|v| = {np.linalg.norm(velocity):.8e}\n\n"
+            f"a along v = {a_projection_text}\n"
+            f"v along a = {v_projection_text}\n(signed; code units)\n\n"
             f"{distance_text}\n(code length units)\n\n"
             f"E = {self.energies[self.step]:.10e}\n"
             f"ΔE = {self.energies[self.step] - self.energies[0]:.8e}")
@@ -2031,8 +2554,10 @@ class NBodyViewer:
                                           self.energy_cursor, self.acceleration_cursor]
 
     def active_canvas(self):
-        return (self.diagnostic_canvas if self.notebook.select() == str(self.diagnostics_tab)
-                else self.canvas)
+        selected = self.notebook.select()
+        if hasattr(self, "drift_tab") and selected == str(self.drift_tab):
+            return self.drift_canvas
+        return self.diagnostic_canvas if selected == str(self.diagnostics_tab) else self.canvas
 
     def pause(self):
         self.playing = False
@@ -2080,7 +2605,7 @@ class NBodyViewer:
 
     def on_tab_change(self, event):
         if hasattr(self, "diagnostic_canvas"):
-            if self.notebook.select() == str(self.diagnostics_tab):
+            if self.notebook.select() in (str(self.diagnostics_tab), str(getattr(self, "drift_tab", ""))):
                 self.controls.pack_forget()
             elif not self.controls.winfo_manager():
                 self.controls.pack(side="left", fill="y", padx=(0, 12), before=self.display)
@@ -2130,7 +2655,8 @@ class NBodyViewer:
             self.on_hover(event)
 
     def on_plot_press(self, event):
-        toolbar = self.toolbar if event.canvas is self.canvas else self.diagnostic_toolbar
+        toolbar = (self.toolbar if event.canvas is self.canvas else
+                   self.drift_toolbar if event.canvas is self.drift_canvas else self.diagnostic_toolbar)
         self.mouse_press = None
         self.drag_axis = None
         if event.button != 1 or toolbar.mode or event.inaxes is None:
@@ -2180,6 +2706,17 @@ class NBodyViewer:
         self.canvas.draw_idle()
 
     def choose_save_path(self, suffix, label, extra=""):
+        if extra == "_energy_drift":
+            original = self.metadata.get("history_png_path")
+            output = Path(original).parent if original else RUN_HISTORY_DIRECTORY
+            output.mkdir(parents=True, exist_ok=True)
+            stamp = (Path(original).stem if original else
+                     datetime.fromisoformat(self.metadata["run_started_at"]).strftime("%Y-%m-%d_%H-%M-%S"))
+            result = self.drift_result
+            name = f"{stamp}_energy_drift_n{result['sample_count']}_seed{result['seed']}{suffix}"
+            return filedialog.asksaveasfilename(parent=self.root, title=label, initialdir=str(output),
+                                                initialfile=name, defaultextension=suffix,
+                                                filetypes=[(label, "*" + suffix)])
         if suffix == ".gif":
             output_path = self.animation_archive_path()
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -2225,10 +2762,12 @@ class NBodyViewer:
     def save_image(self):
         self.pause()
         diagnostic = self.notebook.select() == str(self.diagnostics_tab)
-        path = self.choose_save_path(".png", "PNG image", "_diagnostics" if diagnostic else "_overview")
+        drift = self.notebook.select() == str(self.drift_tab)
+        path = self.choose_save_path(
+            ".png", "PNG image", "_energy_drift" if drift else "_diagnostics" if diagnostic else "_overview")
         if not path:
             return
-        figure = self.diagnostic_figure if diagnostic else self.figure
+        figure = self.active_canvas().figure
         original_size = figure.get_size_inches().copy()
         try:
             figure.set_size_inches(10.6, 9, forward=False)
@@ -2258,6 +2797,7 @@ class NBodyViewer:
                 com_pos=np.array([item["com_pos"] for item in self.diagnostics]),
                 com_v=np.array([item["com_v"] for item in self.diagnostics]),
                 metadata=json.dumps(self.metadata, ensure_ascii=False),
+                **projection_export_arrays(self.accelerations, self.velocities, self.times),
             )
             self.status_var.set(f"Saved every star and time step: {path}")
         except Exception as exc:
@@ -2345,7 +2885,7 @@ class NBodyViewer:
         if self.after_id is not None:
             self.root.after_cancel(self.after_id)
             self.after_id = None
-        for canvas in (self.canvas, self.diagnostic_canvas):
+        for canvas in (self.canvas, self.diagnostic_canvas, self.drift_canvas):
             idle_id = getattr(canvas, "_idle_draw_id", None)
             if idle_id:
                 # Cancel through the widget that registered the Tk command,
@@ -2354,6 +2894,7 @@ class NBodyViewer:
                 canvas._idle_draw_id = None
         self.figure.clear()
         self.diagnostic_figure.clear()
+        self.drift_figure.clear()
         self.root.destroy()
 
     def run(self):
@@ -2372,7 +2913,7 @@ def prepare_batch_plan(plan):
     allowed = {"initial_mode", "seed", "orbit_index", "dt", "total_time", "method",
                "adaptive_enabled", "adaptive_algorithm", "adaptive_eta",
                "acceleration_trigger_ratio", "acceleration_max_power",
-               "sample_every", "compute_backend", "particle_count"}
+               "sample_every", "compute_backend", "cpu_threads", "particle_count"}
     resolved = []
     for index, override in enumerate(runs, 1):
         if not isinstance(override, dict):
@@ -2411,6 +2952,7 @@ def save_batch_arrays(result):
                   velocities=result["velocities"], energies=result["energies"],
                   diagnostic_times=result["diagnostic_times"],
                   metadata=json.dumps(metadata, ensure_ascii=False))
+    arrays.update(projection_export_arrays(result["accelerations"], result["velocities"], result["record_times"]))
     for key in ("energy", "momentum", "angular_momentum", "com_pos", "com_v"):
         arrays["diagnostic_energy" if key == "energy" else key] = np.asarray([d[key] for d in diagnostics])
     temporary = path.with_name(path.name + "." + secrets.token_hex(8) + ".tmp")
@@ -2465,7 +3007,7 @@ def scientific_dt_text(value):
     return format(Decimal(str(value)), "e")
 
 
-def adjust_time_step(variable, factor, parent, scientific=False):
+def adjust_time_step(variable, factor, parent, scientific=False, quantity="Time step"):
     """Change the visible dt without starting a run or changing adaptive settings."""
     from decimal import Decimal, InvalidOperation, localcontext
     try:
@@ -2475,20 +3017,20 @@ def adjust_time_step(variable, factor, parent, scientific=False):
             context.prec = max(28, len(entered.as_tuple().digits) + len(multiplier.as_tuple().digits) + 2)
             value = entered * multiplier
         if not value.is_finite() or value <= 0 or not np.isfinite(float(value)) or float(value) <= 0:
-            raise ValueError("Time step must remain finite and positive.")
+            raise ValueError(f"{quantity} must remain finite and positive.")
         variable.set(scientific_dt_text(value) if scientific else str(value.normalize()))
         return True
     except (ValueError, InvalidOperation, OverflowError) as exc:
-        messagebox.showerror("Invalid time step", str(exc), parent=parent)
+        messagebox.showerror(f"Invalid {quantity.lower()}", str(exc), parent=parent)
         return False
 
 
-def time_step_controls(parent, variable, dialog_parent, scientific=False):
+def time_step_controls(parent, variable, dialog_parent, scientific=False, quantity="Time step"):
     frame = ttk.Frame(parent)
     buttons = []
     for text, factor in (("÷2", .5), ("×2", 2), ("÷5", .2), ("×5", 5), ("÷10", .1), ("×10", 10)):
         button = ttk.Button(frame, text=text, width=3, padding=1,
-                            command=lambda f=factor: adjust_time_step(variable, f, dialog_parent, scientific=scientific))
+                            command=lambda f=factor: adjust_time_step(variable, f, dialog_parent, scientific=scientific, quantity=quantity))
         button.pack(side="left", padx=(0, 2))
         buttons.append(button)
     return frame, buttons
@@ -2685,11 +3227,12 @@ class BatchPlanEditor:
             ("method", "Integrator", ["Leapfrog", "RK4"]),
             ("sample_every", "Diagnostic interval (steps)", None),
             ("adaptive_enabled", "Enable adaptive time step", ["Off", "On"]),
-            ("adaptive_algorithm", "Adaptive algorithm", ["Time-scale method", "Acceleration ratio (retained reference)"]),
+            ("adaptive_algorithm", "Adaptive algorithm", list(ADAPTIVE_ALGORITHMS.values())),
             ("adaptive_eta", "Safety factor eta", None),
             ("acceleration_trigger_ratio", "Acceleration trigger ratio N", None),
             ("acceleration_max_power", "Maximum exponent K", None),
-            ("compute_backend", "Compute device", ["CPU", "GPU (NVIDIA / CuPy)"]),
+            ("compute_backend", "Compute device", list(COMPUTE_BACKENDS.values())),
+            ("cpu_threads", "CPU threads (0 = auto)", None),
             ("particle_count", "Random particle count", None),
         ]
         for i, (key, title, choices) in enumerate(fields):
@@ -2697,17 +3240,23 @@ class BatchPlanEditor:
             ttk.Label(form, text=title).grid(row=row, column=col, sticky="w", padx=(0, 8), pady=4)
             variable = tk.StringVar()
             self.vars[key] = variable
-            host = ttk.Frame(form) if key == "dt" else form
-            if key == "dt":
+            scaled_time = key in ("dt", "total_time")
+            host = ttk.Frame(form) if scaled_time else form
+            if scaled_time:
                 host.grid(row=row, column=col+1, sticky="ew", padx=(0, 12), pady=4)
                 host.columnconfigure(0, weight=1)
             widget = (ttk.Combobox(host, textvariable=variable, values=choices, state="readonly", width=28)
                       if choices else ttk.Entry(host, textvariable=variable, width=28))
-            if key == "dt":
+            if scaled_time:
                 widget.grid(row=0, column=0, sticky="ew")
-                controls, self.dt_buttons = time_step_controls(host, variable, self.window, scientific=True)
-                widget.bind("<FocusOut>", self.format_dt)
-                widget.bind("<Return>", self.format_dt)
+                controls, buttons = time_step_controls(host, variable, self.window, scientific=key == "dt",
+                                                       quantity="Time step" if key == "dt" else "Simulation duration")
+                if key == "dt":
+                    self.dt_buttons = buttons
+                    widget.bind("<FocusOut>", self.format_dt)
+                    widget.bind("<Return>", self.format_dt)
+                else:
+                    self.duration_buttons = buttons
                 controls.grid(row=1, column=0, sticky="w", pady=(3, 0))
             else:
                 widget.grid(row=row, column=col+1, sticky="ew", padx=(0, 12), pady=4)
@@ -2719,7 +3268,7 @@ class BatchPlanEditor:
                 widget.bind("<<ComboboxSelected>>", self.sync_fields)
         self.widgets["orbit_index"].bind("<<ComboboxSelected>>", self.orbit_defaults)
         ttk.Button(form, text="New random seed", command=lambda: self.vars["seed"].set(str(secrets.randbits(32)))).grid(
-            row=7, column=3, sticky="w")
+            row=len(fields)//2, column=3, sticky="w")
         self.auto_reference_var = tk.BooleanVar(value=True)
         self.rmse_var = tk.BooleanVar(value=False)
         self.nrmse_var = tk.BooleanVar(value=False)
@@ -2754,7 +3303,7 @@ class BatchPlanEditor:
             ("dt", "DT", 185, "e"),
             ("duration", "Duration T", 100, "e"),
             ("adaptive", "Adaptive method", 140, "w"),
-            ("device", "Device", 65, "center"),
+            ("device", "Device", 200, "center"),
         )
         self.summary = ttk.Treeview(
             preview, columns=[item[0] for item in columns],
@@ -2789,7 +3338,8 @@ class BatchPlanEditor:
         for key, active in (("seed", not orbit), ("particle_count", not orbit), ("orbit_index", orbit),
                             ("adaptive_algorithm", enabled), ("adaptive_eta", enabled and timescale),
                             ("acceleration_trigger_ratio", enabled and not timescale),
-                            ("acceleration_max_power", enabled and not timescale)):
+                            ("acceleration_max_power", enabled and not timescale),
+                            ("cpu_threads", BACKEND_CODES.get(self.vars["compute_backend"].get()) == "cpu_parallel")):
             widget = self.widgets[key]
             widget.configure(state=("readonly" if isinstance(widget, ttk.Combobox) else "normal") if active else "disabled")
 
@@ -2823,8 +3373,9 @@ class BatchPlanEditor:
         self.widgets["orbit_index"].current(max(0, config.get("orbit_index", 0)))
         self.vars["method"].set("Leapfrog" if config["method"] == "1" else "RK4")
         self.vars["adaptive_enabled"].set("On" if config["adaptive_enabled"] else "Off")
-        self.vars["adaptive_algorithm"].set("Time-scale method" if config["adaptive_algorithm"] == "timescale" else "Acceleration ratio (retained reference)")
-        self.vars["compute_backend"].set("CPU" if config["compute_backend"] == "cpu" else "GPU (NVIDIA / CuPy)")
+        self.vars["adaptive_algorithm"].set(ADAPTIVE_ALGORITHMS[config["adaptive_algorithm"]])
+        self.vars["compute_backend"].set(COMPUTE_BACKENDS[config["compute_backend"]])
+        self.vars["cpu_threads"].set(str(config.get("cpu_threads", 0)))
         self.sync_fields()
 
     def read_current(self):
@@ -2833,8 +3384,10 @@ class BatchPlanEditor:
         config["initial_mode"] = "orbit" if config["initial_mode"] == "Known orbit" else "manual"
         config["orbit_index"] = self.widgets["orbit_index"].current()
         config["adaptive_enabled"] = config["adaptive_enabled"] == "On"
-        config["adaptive_algorithm"] = "timescale" if config["adaptive_algorithm"] == "Time-scale method" else "acceleration_ratio"
-        config["compute_backend"] = "cpu" if config["compute_backend"] == "CPU" else "gpu"
+        config["adaptive_algorithm"] = ADAPTIVE_CODES[config["adaptive_algorithm"]]
+        config["compute_backend"] = BACKEND_CODES[config["compute_backend"]]
+        if config["compute_backend"] != "cpu_parallel":
+            config["cpu_threads"] = 0
         if config["initial_mode"] == "orbit":
             orbit = STABLE_ORBITS[config["orbit_index"]]
             config.update(seed=orbit["seed"], particle_count=orbit["N"])
@@ -2878,7 +3431,7 @@ class BatchPlanEditor:
                         "Reference" if rank == 1 else "",
                         f"{i}: {job['label']}", source, method,
                         scientific_dt_text(c["dt"]), f"{c['total_time']:g}",
-                        adaptive, c["compute_backend"].upper()),
+                        adaptive, backend_summary(dict(c, cpu_threads=c["cpu_threads"] or "auto"))),
                 tags=("reference",) if rank == 1 else (),
             )
 
@@ -3012,7 +3565,7 @@ class NBodyApp:
         self.settings.grid(row=1, column=0, sticky="ew", padx=12, pady=(3, 0))
         for col in (1, 3, 5, 7):
             self.settings.columnconfigure(col, weight=1)
-        self.mode_var = tk.StringVar(value="Specified seed")
+        self.mode_var = tk.StringVar(value="Known orbit")
         self.seed_var = tk.StringVar(value=str(secrets.randbits(32)))
         self.orbit_var = tk.StringVar()
         self.dt_var = tk.StringVar(value="1")
@@ -3020,11 +3573,12 @@ class NBodyApp:
         self.method_var = tk.StringVar(value="Leapfrog (KDK)")
         self.sample_var = tk.StringVar(value="10")
         self.adaptive_var = tk.BooleanVar(value=False)
-        self.adaptive_algorithm_var = tk.StringVar(value="Time-scale method")
+        self.adaptive_algorithm_var = tk.StringVar(value=ADAPTIVE_ALGORITHMS["acceleration_ratio"])
         self.eta_var = tk.StringVar(value="0.03")
         self.trigger_ratio_var = tk.StringVar(value="2.0")
-        self.max_power_var = tk.StringVar(value="3")
-        self.backend_var = tk.StringVar(value="CPU")
+        self.max_power_var = tk.StringVar(value="7")
+        self.backend_var = tk.StringVar(value=COMPUTE_BACKENDS["cpu"])
+        self.cpu_threads_var = tk.StringVar(value="0")
         self.particle_count_var = tk.StringVar(value="5")
         self.record_run_var = tk.BooleanVar(value=True)
         self.form_widgets = []
@@ -3033,16 +3587,20 @@ class NBodyApp:
             ttk.Label(self.settings, text=text).grid(row=row, column=col, sticky="w", padx=(0, 5), pady=3)
 
         def entry(variable, row, col, width=11):
-            host = ttk.Frame(self.settings) if variable is self.dt_var else self.settings
-            if variable is self.dt_var:
+            scaled_time = variable is self.dt_var or variable is self.duration_var
+            host = ttk.Frame(self.settings) if scaled_time else self.settings
+            if scaled_time:
                 host.grid(row=row, column=col, sticky="ew", padx=(0, 12), pady=3)
                 host.columnconfigure(0, weight=1)
             widget = ttk.Entry(host, textvariable=variable, width=width)
-            if variable is self.dt_var:
+            if scaled_time:
                 widget.grid(row=0, column=0, sticky="ew")
-                controls, buttons = time_step_controls(host, variable, self.root)
+                controls, buttons = time_step_controls(host, variable, self.root, quantity="Time step" if variable is self.dt_var else "Simulation duration")
                 controls.grid(row=1, column=0, sticky="w", pady=(3, 0))
-                self.dt_buttons = buttons
+                if variable is self.dt_var:
+                    self.dt_buttons = buttons
+                else:
+                    self.duration_buttons = buttons
                 self.form_widgets.extend(buttons)
             else:
                 widget.grid(row=row, column=col, sticky="ew", padx=(0, 12), pady=3)
@@ -3087,17 +3645,20 @@ class NBodyApp:
         label("Compute device", 3, 0)
         self.backend_combo = ttk.Combobox(
             self.settings, textvariable=self.backend_var, state="readonly",
-            values=["CPU", "GPU (NVIDIA / CuPy)"], width=22)
+            values=list(COMPUTE_BACKENDS.values()), width=28)
         self.backend_combo.grid(row=3, column=1, sticky="ew", padx=(0, 12), pady=3)
         self.form_widgets.append(self.backend_combo)
+        self.backend_combo.bind("<<ComboboxSelected>>", lambda event: self.sync_fields())
+        label("CPU threads (0 = auto)", 3, 4)
+        self.cpu_threads_entry = entry(self.cpu_threads_var, 3, 5)
         label("Random particle count", 3, 2)
         self.particle_count_entry = entry(self.particle_count_var, 3, 3)
-        ttk.Label(self.settings, text="Double precision (float64); CPU may be faster for small particle counts.",
-                  style="Note.TLabel").grid(row=3, column=4, columnspan=4, sticky="w")
+        ttk.Label(self.settings, text="float64; array CPU/GPU compile on first use.",
+                  style="Note.TLabel").grid(row=3, column=6, columnspan=2, sticky="w")
         label("Adaptive algorithm", 4, 0)
         self.adaptive_algorithm_combo = ttk.Combobox(
             self.settings, textvariable=self.adaptive_algorithm_var, state="disabled",
-            values=["Time-scale method", "Acceleration ratio (retained reference)"], width=23)
+            values=list(ADAPTIVE_ALGORITHMS.values()), width=23)
         self.adaptive_algorithm_combo.grid(row=4, column=1, sticky="ew", padx=(0, 12), pady=3)
         self.adaptive_algorithm_combo.bind("<<ComboboxSelected>>", lambda event: self.sync_fields())
         self.form_widgets.append(self.adaptive_algorithm_combo)
@@ -3123,7 +3684,7 @@ class NBodyApp:
                   style="Note.TLabel").grid(row=7, column=3, columnspan=5, sticky="w")
         self.mode_combo.bind("<<ComboboxSelected>>", self.on_source_change)
         self.orbit_combo.bind("<<ComboboxSelected>>", self.use_orbit_defaults)
-        self.sync_fields()
+        self.use_orbit_defaults()
 
         self.settings.bind("<Configure>", lambda event: [
             child.configure(wraplength=max(450, event.width - 28))
@@ -3309,6 +3870,7 @@ class NBodyApp:
         if self.running:
             return
         mode = self.mode_var.get()
+        self.cpu_threads_entry.configure(state="normal" if BACKEND_CODES.get(self.backend_var.get()) == "cpu_parallel" else "disabled")
         self.seed_entry.configure(state="normal" if mode == "Specified seed" else "disabled")
         self.particle_count_entry.configure(state="disabled" if mode == "Known orbit" else "normal")
         self.orbit_combo.configure(state="readonly" if mode == "Known orbit" else "disabled")
@@ -3363,16 +3925,16 @@ class NBodyApp:
             dt=self.dt_var.get(), total_time=self.duration_var.get(),
             method="1" if self.method_combo.current() == 0 else "2",
             adaptive_enabled=self.adaptive_var.get(),
-            adaptive_algorithm=("timescale" if self.adaptive_algorithm_combo.current() == 0
-                                else "acceleration_ratio"),
+            adaptive_algorithm=ADAPTIVE_CODES[self.adaptive_algorithm_var.get()],
             adaptive_eta=(self.eta_var.get() if self.adaptive_var.get()
                           and self.adaptive_algorithm_combo.current() == 0 else .03),
             acceleration_trigger_ratio=(self.trigger_ratio_var.get() if self.adaptive_var.get()
-                                        and self.adaptive_algorithm_combo.current() == 1 else 2.0),
+                                        and self.adaptive_algorithm_combo.current() != 0 else 2.0),
             acceleration_max_power=(self.max_power_var.get() if self.adaptive_var.get()
-                                    and self.adaptive_algorithm_combo.current() == 1 else 3),
+                                    and self.adaptive_algorithm_combo.current() != 0 else 7),
             sample_every=self.sample_var.get(),
-            compute_backend="gpu" if self.backend_combo.current() == 1 else "cpu",
+            compute_backend=BACKEND_CODES[self.backend_var.get()],
+            cpu_threads=(self.cpu_threads_var.get() if BACKEND_CODES[self.backend_var.get()] == "cpu_parallel" else 0),
             particle_count=(STABLE_ORBITS[self.orbit_combo.current()]["N"]
                             if mode == "orbit" else self.particle_count_var.get())))
 
@@ -3407,8 +3969,8 @@ class NBodyApp:
         self.set_running(True)
         self.progress_var.set(0)
         self.progress_text.set(
-            f"Starting {config['compute_backend'].upper()} computation... "
-            "The first GPU run may compile its kernel. Existing plots still show the previous result.")
+            f"Starting {COMPUTE_BACKENDS[config['compute_backend']]} computation... "
+            "First use of array CPU or GPU may compile its kernels before timing. Existing plots show the previous result.")
 
         # Record the Toronto start time and UTC offset; saving later does not replace this timestamp.
         run_started_at = datetime.now(gettz("America/Toronto")).isoformat(timespec="microseconds")
