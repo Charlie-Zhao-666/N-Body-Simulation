@@ -13,6 +13,8 @@
     "NA",
     0.6539244532740379,
     3.7711120573351264,
+    "NA",
+    "NA",
     2.7970710762279737e-15,
     1.6837902275422538e-15,
     2.711688061446776e-15,
@@ -23,10 +25,12 @@
     3.368915058203852e-16,
     5.423578588744473e-16,
     "CPU",
+    "13th Gen Intel(R) Core(TM) i9-13900K",
     1.6556038999988232,
     50000.0,
-    "2026-10-02_07-35-55.png"
+    "images/2026-10-02_07-35-55.webp"
   ],
   "started_at": "2026-10-02T07:35:55.369418-04:00",
-  "source": "simulation"
+  "source": "simulation",
+  "device_model_source": "User confirmed on 2026-10-07: all historical runs used this same computer; model queried locally during schema migration."
 }

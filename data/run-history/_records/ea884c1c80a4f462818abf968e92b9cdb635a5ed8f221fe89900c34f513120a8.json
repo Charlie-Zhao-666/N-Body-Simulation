@@ -25,10 +25,12 @@
     1.2408345387678407e-14,
     0.0,
     "CPU",
+    "13th Gen Intel(R) Core(TM) i9-13900K",
     8.25637579999966,
     6.2346748391,
-    "2026-10-05_00-37-37.png"
+    "images/2026-10-05_00-37-37.webp"
   ],
   "started_at": "2026-10-05T00:37:37.879746-04:00",
-  "source": "simulation"
+  "source": "simulation",
+  "device_model_source": "User confirmed on 2026-10-07: all historical runs used this same computer; model queried locally during schema migration."
 }

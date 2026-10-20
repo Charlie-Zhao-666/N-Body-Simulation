@@ -83,7 +83,7 @@
       },
       "status": "saved",
       "message": "",
-      "plot": "2026-10-04_02-45-48.png",
+      "plot": "images/2026-10-04_02-45-48.webp",
       "data": "2026-10-04_02-45-48.npz",
       "run_id": "d6731ba75afc22e30a0b956b4f36399d"
     },
@@ -107,7 +107,7 @@
       },
       "status": "saved",
       "message": "",
-      "plot": "2026-10-04_02-45-55.png",
+      "plot": "images/2026-10-04_02-45-55.webp",
       "data": "2026-10-04_02-45-55.npz",
       "run_id": "fe0a36aa255c179a50a232cd951fb1ed"
     },

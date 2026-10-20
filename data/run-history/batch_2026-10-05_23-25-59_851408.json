@@ -84,7 +84,7 @@
       },
       "status": "saved",
       "message": "",
-      "plot": "2026-10-05_23-26-00.png",
+      "plot": "images/2026-10-05_23-26-00.webp",
       "data": "2026-10-05_23-26-00.npz",
       "run_id": "d278a63fa50825a9dd9c98bd76392772"
     },
@@ -108,7 +108,7 @@
       },
       "status": "saved",
       "message": "",
-      "plot": "2026-10-05_23-26-02.png",
+      "plot": "images/2026-10-05_23-26-02.webp",
       "data": "2026-10-05_23-26-02.npz",
       "run_id": "69beba6730d710d3bb973389d242af96"
     },
@@ -132,7 +132,7 @@
       },
       "status": "saved",
       "message": "",
-      "plot": "2026-10-05_23-26-05.png",
+      "plot": "images/2026-10-05_23-26-05.webp",
       "data": "2026-10-05_23-26-05.npz",
       "run_id": "dd4764b0c56decd2f153d4ca18ebf607"
     }

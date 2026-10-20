@@ -4,3 +4,4 @@
 *.json text eol=lf
 *.dat text eol=lf
 *.png -text
+*.webp -text

@@ -56,7 +56,7 @@ Open **Test mode**, use **Load plan**, and select a JSON file from [`plans/`](pl
 
 ## Published experiments and results
 
-Browse the [run history and clickable images](data/run-history/README.md), the [full aligned runs.dat](data/run-history/runs.dat), and the [test log](docs/test_report.txt).
+Browse the [run history and clickable images](data/run-history/README.md), the [full clickable table](data/run-history/runs.md), the [aligned runs.dat](data/run-history/runs.dat), and the [test log](docs/test_report.txt).
 
 The original experiments are also available as [importable historical plans](plans/historical/README.md):
 
@@ -92,7 +92,7 @@ Energy figures distinguish bounded oscillations from drift. KDK can preserve ang
 | `Galaxies collision simulation.py` | Earlier separate galaxy-collision visualization demo |
 | `requirements.txt` | CPU application dependencies |
 | `plans/` | Loadable configurations for the published 45-run suite |
-| `data/run-history/` | Lightweight published snapshot: tables, full-precision summaries, comparisons and 101 PNGs |
+| `data/run-history/` | Published snapshot: 388 records, 386 linked lossless WebP plots, full-precision summaries and comparisons |
 | `docs/test_report.txt` | Test descriptions and runs.dat line ranges |
 | `docs/reports/2026-10-07/` | Detailed analysis, machine-readable metrics and summary figures |
 | `docs/cpu_gpu_benchmark_plan.md` | Planned particle-count sweep and crossover protocol |
@@ -104,9 +104,9 @@ For the original console program, `mplcursors` may also be needed; install it se
 
 ### Published data versus local outputs
 
-The current published snapshot contains 103 run records and 101 conservation PNGs (about 12.8 MiB of PNGs); two legacy records lack images. Date/time names match the corresponding table rows. The `Plot` field uses relative filenames, and the Markdown gallery provides links usable directly on GitHub.
+The current published snapshot contains **388 run records and 386 conservation plots**, plus 4 supplementary plots, exported on 2026-10-19. Two legacy records lack images. All run-history plots use lossless WebP. The [complete table](data/run-history/runs.md) and [compact table](data/run-history/README.md) provide clickable relative Plot links; `runs.dat` retains the aligned plain-text data. This is a data-only update: some newer runs used newer local code than the simulation version currently published here.
 
-The approximately **12.2 GiB of local NPZ trajectories are not uploaded**. Historical batch JSON files retain their NPZ output names as provenance, but the raw arrays are not included. New local runs create a separate `graph and data/` folder beside the program, ignored by Git. `data/run-history/` is a published snapshot and is not overwritten by running the application. Keep full arrays locally or use a dedicated data archive for future releases. GitHub recommends keeping repositories small and blocks ordinary Git files above 100 MiB; see [GitHub's large-file guidance](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github).
+**Full local NPZ trajectories are not uploaded.** Historical batch JSON files retain their NPZ output names as provenance, but the raw arrays are not included. New local runs create a separate `graph and data/` folder beside the program, ignored by Git. `data/run-history/` is a published snapshot and is not overwritten by running the application. Keep full arrays locally or use a dedicated data archive for future releases. GitHub recommends keeping repositories small and blocks ordinary Git files above 100 MiB; see [GitHub's large-file guidance](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github).
 
 A publication smoke check used the same five-body initial state and 10 fixed steps on the CPU and an NVIDIA GeForce RTX 5090 for both integrators; saved positions agreed at the tested precision. This only checks a short execution path, not general trajectory equivalence or performance. [Check record](docs/reports/publication_checks.json).
 

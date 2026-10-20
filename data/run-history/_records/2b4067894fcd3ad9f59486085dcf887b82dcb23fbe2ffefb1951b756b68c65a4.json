@@ -25,10 +25,12 @@
     7.37257477290143e-18,
     0.0,
     "GPU",
+    "NVIDIA GeForce RTX 5090",
     0.011086300000897609,
     6.5,
-    "2026-10-04_03-53-26.png"
+    "images/2026-10-04_03-53-26.webp"
   ],
   "started_at": "2026-10-04T03:53:26.865853-04:00",
-  "source": "simulation"
+  "source": "simulation",
+  "device_model_source": "User confirmed on 2026-10-07: all historical runs used this same computer; model queried locally during schema migration."
 }

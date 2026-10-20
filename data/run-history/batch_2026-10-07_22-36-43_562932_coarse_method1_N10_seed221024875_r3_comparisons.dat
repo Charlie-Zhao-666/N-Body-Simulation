@@ -1,0 +1,65 @@
+# Position comparisons: relative trajectory differences, not exact-solution errors.
+# Reference: Test 1; previous means the preceding executed run (reference first, then ascending dt).
+# Common time interval: [0, 1]; uniform samples: 1001 (including endpoints).
+# Length scale: 44.16535063467231; unweighted initial RMS radius about the mass-weighted center of mass of the reference test.
+# Alignment: cubic Hermite interpolation using saved positions and velocities; exact saved nodes retained.
+# Metric: sqrt(mean over stars and uniform time samples of squared 3D position distance); endpoints included.
+# Per-star values and full settings are stored in the companion batch JSON.
+
+
+  Test  Against Kind                   Star                    RMSE                   NRMSE Status
+     2        1 reference               All  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     2        1 reference                 1  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     2        1 reference                 2  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     2        1 reference                 3  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     2        1 reference                 4  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     2        1 reference                 5  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     2        1 reference                 6  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     2        1 reference                 7  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     2        1 reference                 8  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     2        1 reference                 9  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     2        1 reference                10  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     3        1 reference               All  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     3        1 reference                 1  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     3        1 reference                 2  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     3        1 reference                 3  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     3        1 reference                 4  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     3        1 reference                 5  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     3        1 reference                 6  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     3        1 reference                 7  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     3        1 reference                 8  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     3        1 reference                 9  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     3        1 reference                10  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     4        1 reference               All  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     4        1 reference                 1  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     4        1 reference                 2  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     4        1 reference                 3  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     4        1 reference                 4  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     4        1 reference                 5  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     4        1 reference                 6  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     4        1 reference                 7  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     4        1 reference                 8  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     4        1 reference                 9  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     4        1 reference                10  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     5        1 reference               All  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     5        1 reference                 1  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     5        1 reference                 2  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     5        1 reference                 3  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     5        1 reference                 4  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     5        1 reference                 5  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     5        1 reference                 6  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     5        1 reference                 7  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     5        1 reference                 8  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     5        1 reference                 9  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     5        1 reference                10  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     6        1 reference               All  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     6        1 reference                 1  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     6        1 reference                 2  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     6        1 reference                 3  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     6        1 reference                 4  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     6        1 reference                 5  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     6        1 reference                 6  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     6        1 reference                 7  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     6        1 reference                 8  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     6        1 reference                 9  0.0000000000000000e+00  0.0000000000000000e+00 saved
+     6        1 reference                10  0.0000000000000000e+00  0.0000000000000000e+00 saved

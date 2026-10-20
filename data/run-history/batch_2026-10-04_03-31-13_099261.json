@@ -186,7 +186,7 @@
       },
       "status": "saved",
       "message": "",
-      "plot": "2026-10-04_03-31-13.png",
+      "plot": "images/2026-10-04_03-31-13.webp",
       "data": "2026-10-04_03-31-13.npz",
       "run_id": "eebfa75cfa1bb519b0b5ac9b196b107e"
     },
@@ -210,7 +210,7 @@
       },
       "status": "saved",
       "message": "",
-      "plot": "2026-10-04_03-40-49.png",
+      "plot": "images/2026-10-04_03-40-49.webp",
       "data": "2026-10-04_03-40-49.npz",
       "run_id": "64c46bdcaac8e4fd151cdccf053716e4"
     },
@@ -234,7 +234,7 @@
       },
       "status": "saved",
       "message": "",
-      "plot": "2026-10-04_03-43-47.png",
+      "plot": "images/2026-10-04_03-43-47.webp",
       "data": "2026-10-04_03-43-47.npz",
       "run_id": "c4fb1e649e95aa74aacfe5799414445c"
     },
@@ -258,7 +258,7 @@
       },
       "status": "saved",
       "message": "",
-      "plot": "2026-10-04_03-45-34.png",
+      "plot": "images/2026-10-04_03-45-34.webp",
       "data": "2026-10-04_03-45-34.npz",
       "run_id": "951740602256feb4bcb3835bee299053"
     },
@@ -282,7 +282,7 @@
       },
       "status": "saved",
       "message": "",
-      "plot": "2026-10-04_03-46-34.png",
+      "plot": "images/2026-10-04_03-46-34.webp",
       "data": "2026-10-04_03-46-34.npz",
       "run_id": "33925a8ec7db56b4567133b9b7bc7447"
     },
@@ -306,7 +306,7 @@
       },
       "status": "saved",
       "message": "",
-      "plot": "2026-10-04_03-47-24.png",
+      "plot": "images/2026-10-04_03-47-24.webp",
       "data": "2026-10-04_03-47-24.npz",
       "run_id": "0d3fa1e4a7409047cceb3b14e80de2d2"
     },
@@ -330,7 +330,7 @@
       },
       "status": "saved",
       "message": "",
-      "plot": "2026-10-04_03-48-10.png",
+      "plot": "images/2026-10-04_03-48-10.webp",
       "data": "2026-10-04_03-48-10.npz",
       "run_id": "a30dbb409283d0b3e44c14b3fe224da2"
     },
@@ -354,7 +354,7 @@
       },
       "status": "saved",
       "message": "",
-      "plot": "2026-10-04_03-48-55.png",
+      "plot": "images/2026-10-04_03-48-55.webp",
       "data": "2026-10-04_03-48-55.npz",
       "run_id": "cccd8cc987916d3a75f7422d50e608ff"
     },
@@ -378,7 +378,7 @@
       },
       "status": "saved",
       "message": "",
-      "plot": "2026-10-04_03-49-38.png",
+      "plot": "images/2026-10-04_03-49-38.webp",
       "data": "2026-10-04_03-49-38.npz",
       "run_id": "f5ba50546f585a5a6e2d994d1202d3b0"
     }

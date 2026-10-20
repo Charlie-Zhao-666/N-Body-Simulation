@@ -1,0 +1,652 @@
+{
+  "plan": {
+    "base": {},
+    "runs": [
+      {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "label": "confirm RK4 N=5 CPU repeat=1"
+      },
+      {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "gpu",
+        "label": "confirm RK4 N=5 GPU repeat=1"
+      },
+      {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "gpu",
+        "label": "confirm RK4 N=5 GPU repeat=2"
+      },
+      {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "label": "confirm RK4 N=5 CPU repeat=2"
+      },
+      {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "label": "confirm RK4 N=5 CPU repeat=3"
+      },
+      {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "gpu",
+        "label": "confirm RK4 N=5 GPU repeat=3"
+      },
+      {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "gpu",
+        "label": "confirm RK4 N=5 GPU repeat=4"
+      },
+      {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "label": "confirm RK4 N=5 CPU repeat=4"
+      },
+      {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu",
+        "label": "confirm RK4 N=5 CPU repeat=5"
+      },
+      {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "gpu",
+        "label": "confirm RK4 N=5 GPU repeat=5"
+      }
+    ],
+    "comparison": {
+      "rmse": true,
+      "nrmse": true,
+      "previous": false,
+      "reference": 1,
+      "auto_reference": false,
+      "samples": 1001
+    }
+  },
+  "jobs": [
+    {
+      "label": "confirm RK4 N=5 CPU repeat=1",
+      "config": {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu"
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "images/2026-10-07_22-55-54.webp",
+      "data": "2026-10-07_22-55-54.npz",
+      "run_id": "0781300506e70b3e6267f934a53053fb"
+    },
+    {
+      "label": "confirm RK4 N=5 GPU repeat=1",
+      "config": {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "gpu"
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "images/2026-10-07_22-55-54.716682.webp",
+      "data": "2026-10-07_22-55-54.716682.npz",
+      "run_id": "b95358c76b612614666bde642346a9e4"
+    },
+    {
+      "label": "confirm RK4 N=5 GPU repeat=2",
+      "config": {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "gpu"
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "images/2026-10-07_22-55-55.webp",
+      "data": "2026-10-07_22-55-55.npz",
+      "run_id": "e06be6f58e5ab92234d6324f6366c499"
+    },
+    {
+      "label": "confirm RK4 N=5 CPU repeat=2",
+      "config": {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu"
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "images/2026-10-07_22-55-55.887454.webp",
+      "data": "2026-10-07_22-55-55.887454.npz",
+      "run_id": "e7ae399732b413ba374f10a3925811d6"
+    },
+    {
+      "label": "confirm RK4 N=5 CPU repeat=3",
+      "config": {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu"
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "images/2026-10-07_22-55-56.webp",
+      "data": "2026-10-07_22-55-56.npz",
+      "run_id": "ded895ba6bde3087a5437b93f2bd944f"
+    },
+    {
+      "label": "confirm RK4 N=5 GPU repeat=3",
+      "config": {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "gpu"
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "images/2026-10-07_22-55-56.680827.webp",
+      "data": "2026-10-07_22-55-56.680827.npz",
+      "run_id": "a592cca40e992a68ab58d88f44f54f8f"
+    },
+    {
+      "label": "confirm RK4 N=5 GPU repeat=4",
+      "config": {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "gpu"
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "images/2026-10-07_22-55-57.webp",
+      "data": "2026-10-07_22-55-57.npz",
+      "run_id": "61af3e42306e532326cf4ac02ea835c5"
+    },
+    {
+      "label": "confirm RK4 N=5 CPU repeat=4",
+      "config": {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu"
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "images/2026-10-07_22-55-57.771769.webp",
+      "data": "2026-10-07_22-55-57.771769.npz",
+      "run_id": "b7b2b121d567a25731dc343f6d3d7c93"
+    },
+    {
+      "label": "confirm RK4 N=5 CPU repeat=5",
+      "config": {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "cpu"
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "images/2026-10-07_22-55-58.webp",
+      "data": "2026-10-07_22-55-58.npz",
+      "run_id": "eeebbb9316e28707636307ea3b71cf6f"
+    },
+    {
+      "label": "confirm RK4 N=5 GPU repeat=5",
+      "config": {
+        "initial_mode": "manual",
+        "seed": 221024875,
+        "orbit_index": 0,
+        "particle_count": 5,
+        "dt": 0.001,
+        "total_time": 1.0,
+        "method": "2",
+        "sample_every": 10,
+        "adaptive_enabled": false,
+        "adaptive_algorithm": "timescale",
+        "adaptive_eta": 0.03,
+        "acceleration_trigger_ratio": 2.0,
+        "acceleration_max_power": 3,
+        "compute_backend": "gpu"
+      },
+      "status": "saved",
+      "message": "",
+      "plot": "images/2026-10-07_22-55-58.549916.webp",
+      "data": "2026-10-07_22-55-58.549916.npz",
+      "run_id": "81a903c78b818c4a1ff8078c65b3d7e0"
+    }
+  ],
+  "comparison": {
+    "rmse": true,
+    "nrmse": true,
+    "previous": false,
+    "reference": 1,
+    "samples": 1001,
+    "auto_reference": false,
+    "length_scale": 41.2081037353107,
+    "time_start": 0.0,
+    "time_end": 1.0,
+    "alignment": "cubic Hermite interpolation using saved positions and velocities; exact saved nodes retained",
+    "normalization": "unweighted initial RMS radius about the mass-weighted center of mass of the reference test",
+    "metric": "sqrt(mean over stars and uniform time samples of squared 3D position distance); endpoints included"
+  },
+  "benchmark_group": "confirm_method2_N5_seed221024875_r5",
+  "comparisons": [
+    {
+      "test": 2,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.0,
+      "nrmse": 0.0,
+      "per_star_rmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_star_nrmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "test": 3,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.0,
+      "nrmse": 0.0,
+      "per_star_rmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_star_nrmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "test": 4,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.0,
+      "nrmse": 0.0,
+      "per_star_rmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_star_nrmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "test": 5,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.0,
+      "nrmse": 0.0,
+      "per_star_rmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_star_nrmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "test": 6,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.0,
+      "nrmse": 0.0,
+      "per_star_rmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_star_nrmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "test": 7,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.0,
+      "nrmse": 0.0,
+      "per_star_rmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_star_nrmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "test": 8,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.0,
+      "nrmse": 0.0,
+      "per_star_rmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_star_nrmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "test": 9,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.0,
+      "nrmse": 0.0,
+      "per_star_rmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_star_nrmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "test": 10,
+      "against": 1,
+      "status": "saved",
+      "kind": "reference",
+      "message": "",
+      "rmse": 0.0,
+      "nrmse": 0.0,
+      "per_star_rmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_star_nrmse": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "comparison_file": "batch_2026-10-07_22-55-59_114339_confirm_method2_N5_seed221024875_r5_comparisons.dat"
+}

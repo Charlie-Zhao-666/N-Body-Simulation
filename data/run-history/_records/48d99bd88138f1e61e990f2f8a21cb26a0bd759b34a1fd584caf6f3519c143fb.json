@@ -9,8 +9,12 @@
     "6500",
     "6500",
     "NA",
+    "NA",
+    "NA",
     "4.209950199010791e-07",
     "1.1338839798669017e-07",
+    "NA",
+    "NA",
     "1.0463602081348526e-14",
     "8.107737837619748e-15",
     "0.0",
@@ -21,11 +25,13 @@
     "2.7025792792065814e-15",
     "0.0",
     "CPU",
+    "13th Gen Intel(R) Core(TM) i9-13900K",
     "0.4250926000022446",
     "6.5",
     "NA"
   ],
   "started_at": "NA",
   "source": "legacy_csv",
-  "legacy_source": "legacy_run_history.csv"
+  "legacy_source": "运行记录.csv",
+  "device_model_source": "User confirmed on 2026-10-07: all historical runs used this same computer; model queried locally during schema migration."
 }

@@ -355,7 +355,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-06.png",
+      "plot": "images/2026-10-07_04-06-06.webp",
       "data": "2026-10-07_04-06-06.npz",
       "run_id": "b8a8ea4cfd3f923d9a3f96035242f260",
       "message": ""
@@ -379,7 +379,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-12.png",
+      "plot": "images/2026-10-07_04-06-12.webp",
       "data": "2026-10-07_04-06-12.npz",
       "run_id": "175eb6195e032dae28e5a9402f45ff3e",
       "message": ""
@@ -403,7 +403,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-15.png",
+      "plot": "images/2026-10-07_04-06-15.webp",
       "data": "2026-10-07_04-06-15.npz",
       "run_id": "4a36f05d23a80bc018355a8bfed2aeb9",
       "message": ""
@@ -427,7 +427,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-18.png",
+      "plot": "images/2026-10-07_04-06-18.webp",
       "data": "2026-10-07_04-06-18.npz",
       "run_id": "0ed6a538a9dcc13e9dbaeef1455d55db",
       "message": ""
@@ -451,7 +451,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-21.png",
+      "plot": "images/2026-10-07_04-06-21.webp",
       "data": "2026-10-07_04-06-21.npz",
       "run_id": "331a38653faae6da3a40e2b96f700c47",
       "message": ""
@@ -475,7 +475,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-24.png",
+      "plot": "images/2026-10-07_04-06-24.webp",
       "data": "2026-10-07_04-06-24.npz",
       "run_id": "31445fb8a8e8350b2ecdc29e778b9cd5",
       "message": ""
@@ -499,7 +499,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-27.png",
+      "plot": "images/2026-10-07_04-06-27.webp",
       "data": "2026-10-07_04-06-27.npz",
       "run_id": "34cc15425c62414fa1786b25348fecf9",
       "message": ""
@@ -523,7 +523,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-29.png",
+      "plot": "images/2026-10-07_04-06-29.webp",
       "data": "2026-10-07_04-06-29.npz",
       "run_id": "1567c5cb5ff776b68afa309c87ee0787",
       "message": ""
@@ -547,7 +547,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-32.png",
+      "plot": "images/2026-10-07_04-06-32.webp",
       "data": "2026-10-07_04-06-32.npz",
       "run_id": "dc376f2028e7d2110ada22ff7464096d",
       "message": ""
@@ -571,7 +571,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-36.png",
+      "plot": "images/2026-10-07_04-06-36.webp",
       "data": "2026-10-07_04-06-36.npz",
       "run_id": "93bea68cd1b299c99fa803f26c173c8e",
       "message": ""
@@ -595,7 +595,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-39.png",
+      "plot": "images/2026-10-07_04-06-39.webp",
       "data": "2026-10-07_04-06-39.npz",
       "run_id": "a2bf81f2cddd824e400a1c7252336e33",
       "message": ""
@@ -619,7 +619,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-41.png",
+      "plot": "images/2026-10-07_04-06-41.webp",
       "data": "2026-10-07_04-06-41.npz",
       "run_id": "35069c6fce7e91ed785a56d3a87199f2",
       "message": ""
@@ -643,7 +643,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-44.png",
+      "plot": "images/2026-10-07_04-06-44.webp",
       "data": "2026-10-07_04-06-44.npz",
       "run_id": "5b783417ebde96cf3a398e1d98fbdd22",
       "message": ""
@@ -667,7 +667,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-46.png",
+      "plot": "images/2026-10-07_04-06-46.webp",
       "data": "2026-10-07_04-06-46.npz",
       "run_id": "c8847ae6f0721b64557fa6a6c56e7660",
       "message": ""
@@ -691,7 +691,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-49.png",
+      "plot": "images/2026-10-07_04-06-49.webp",
       "data": "2026-10-07_04-06-49.npz",
       "run_id": "6bbca3080c1bba800455b25f1cb4fe0a",
       "message": ""
@@ -715,7 +715,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-51.png",
+      "plot": "images/2026-10-07_04-06-51.webp",
       "data": "2026-10-07_04-06-51.npz",
       "run_id": "c4ce15b3043b951a0714625cc7dfca07",
       "message": ""
@@ -739,7 +739,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-54.png",
+      "plot": "images/2026-10-07_04-06-54.webp",
       "data": "2026-10-07_04-06-54.npz",
       "run_id": "2a7bb50b1493ddb2acb91005b71373e1",
       "message": ""
@@ -763,7 +763,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-57.png",
+      "plot": "images/2026-10-07_04-06-57.webp",
       "data": "2026-10-07_04-06-57.npz",
       "run_id": "1dd715f18b9c94e3a571a6c15a0272ca",
       "message": ""
@@ -787,7 +787,7 @@
         "particle_count": 3
       },
       "status": "saved",
-      "plot": "2026-10-07_04-06-59.png",
+      "plot": "images/2026-10-07_04-06-59.webp",
       "data": "2026-10-07_04-06-59.npz",
       "run_id": "317ffe890b9d684d87f28bcbc1b8c798",
       "message": ""
