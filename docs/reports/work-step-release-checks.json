@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-20",
+  "purpose": "Behavioral release regression, not a speed/accuracy ranking",
+  "gpu_tested": true,
+  "gui_tested": true,
+  "baseline_exact_regression": true,
+  "removed_energy_ratio_rejected": true,
+  "controller_recovery_boundaries": true,
+  "rollback_replayed": true,
+  "runs": [
+    {
+      "method": "1",
+      "backend": "cpu",
+      "steps": 40,
+      "rejected": 1,
+      "flagged": 40
+    },
+    {
+      "method": "1",
+      "backend": "cpu_array",
+      "steps": 40,
+      "rejected": 1,
+      "flagged": 40
+    },
+    {
+      "method": "1",
+      "backend": "cpu_parallel",
+      "steps": 40,
+      "rejected": 1,
+      "flagged": 40
+    },
+    {
+      "method": "1",
+      "backend": "gpu",
+      "steps": 40,
+      "rejected": 1,
+      "flagged": 40
+    },
+    {
+      "method": "2",
+      "backend": "cpu",
+      "steps": 40,
+      "rejected": 1,
+      "flagged": 40
+    },
+    {
+      "method": "2",
+      "backend": "cpu_array",
+      "steps": 40,
+      "rejected": 1,
+      "flagged": 40
+    },
+    {
+      "method": "2",
+      "backend": "cpu_parallel",
+      "steps": 40,
+      "rejected": 1,
+      "flagged": 40
+    },
+    {
+      "method": "2",
+      "backend": "gpu",
+      "steps": 40,
+      "rejected": 1,
+      "flagged": 40
+    }
+  ],
+  "regression_configuration": {
+    "initial_mode": "orbit",
+    "orbit_index": 4,
+    "dt": 0.001,
+    "total_time": 0.02,
+    "sample_every": 3,
+    "work_step_factor": 2.0,
+    "work_max_power": 1,
+    "work_threshold": 1e-12,
+    "cpu_threads": 2
+  },
+  "cap_test_note": "The deliberately tiny threshold exercises rollback/cap reporting; it is not a recommended scientific tolerance.",
+  "demo_results": [
+    {
+      "label": "Work-step KDK cap demonstration",
+      "steps": 4355,
+      "rejected": 1,
+      "flagged": 26
+    },
+    {
+      "label": "Work-step RK4 cap demonstration",
+      "steps": 4355,
+      "rejected": 2,
+      "flagged": 26
+    }
+  ]
+}

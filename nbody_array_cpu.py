@@ -1,4 +1,4 @@
-"""Optional float64 CPU array solvers; imported only for array CPU modes.
+"""Optional float64 CPU array solvers; also loaded by GUI startup warmup.
 
 The serial and parallel solvers share arithmetic and target-star summation order.
 Each parallel iteration owns one output row, so there are no shared force writes.
@@ -107,6 +107,20 @@ def _make_advance(fields):
 
 advance_serial = _make_advance(fields_serial)
 advance_parallel = _make_advance(fields_parallel)
+
+
+def warmup_cpu_backend(parallel=False):
+    """Prepare production float64 signatures on disposable two-body data.
+
+    Array length and thread count do not specialize these signatures. Exercise
+    both integrators and adaptive branches without touching a user's state.
+    """
+    stars = [dict(mass=1.0, pos=np.array([-0.5, 0.0, 0.0]), v=np.array([0.0, -0.5, 0.0])),
+             dict(mass=1.0, pos=np.array([0.5, 0.0, 0.0]), v=np.array([0.0, 0.5, 0.0]))]
+    with thread_scope():
+        for adaptive in (False, True):
+            ArrayCPUState(stars, parallel=parallel,
+                          threads=min(2, numba.config.NUMBA_NUM_THREADS), adaptive=adaptive)
 
 
 class ArrayCPUState:

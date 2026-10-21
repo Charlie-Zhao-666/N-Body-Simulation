@@ -30,16 +30,31 @@ Listed by development stage, starting with the original model and continuing thr
 
 The early milestones are recorded in commits [4893a91](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/4893a91) (original model and conservation analysis), [c9f606c](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/c9f606c) (seed control), [5daddb6](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/5daddb6) (known orbits) and [ee2b2e4](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/ee2b2e4) (RK4 selection). Later interactive development was published together in [18a13f5](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/18a13f5); its stages above follow the development record, not separate per-feature Git timestamps.
 
+## Current adaptive-stepping update (2026-10-20)
+
+The current application adds the experimental **Acceleration × velocity × dt** controller (`work_step`), with adjustable shrink/recovery factor **N**, cumulative level cap **K**, and **Work trigger threshold**. The separate total-energy-ratio rejection method has been removed from new simulations and batch plans. Historical result records remain readable.
+
+For each trial, the new controller evaluates **Q = max_i |a_i(trial) · v_i(trial)| h_actual** at the trial endpoint. Above the threshold, it restores the accepted starting state and retries one smaller step band. It can recover one larger band using the current accepted state. The minimum nominal step is **dt_initial / N^K**. **At K, an over-threshold trial is accepted and flagged**, rather than silently reducing the step indefinitely. Red interval shading and an **Adaptive limit report** identify these accepted exceptions.
+
+This is a dimensional, per-particle work-rate indicator, not total-energy error control, an embedded error estimate, or a guarantee of trajectory accuracy. It has no mass factor or energy normalization. See the [algorithm specification, equations, execution flow and limitations](docs/adaptive-stepping.md), [reproducible short demo plan](plans/work-step-demo.json), and [release verification](docs/reports/work-step-release-checks.json).
+
+Other updates in this version:
+
+- Multi-thread CPU is the default; both Numba CPU backends prepare in the background from script startup, before window construction. An early Start waits for readiness and remains cancellable. GPU initialization remains on demand.
+- Adaptive methods share the main parameter and K slots while retaining their own values; timescale mode displays Safety factor. The work-step threshold is independently adjustable.
+- E / delta-E and linear / symmetric-log energy views, linear energy-drift fits, mean actual dt / initial dt, full recorded points in zoomed time windows, and time-weighted energy RMSE/NRMSE from all records.
+- A per-star work-step indicator with an all-star maximum and threshold line, linked to the same time cursor. Limit intervals also appear on the relevant time plots.
+
 ## Quick start
 
 Install Python with Tk support, then install the CPU requirements and launch the interface:
 
 ```sh
-python -m pip install -r requirements.txt
+python -m pip install -r requirements.txt -r requirements-array-cpu.txt
 python interactive_nbody_lab.py
 ```
 
-`stable_orbits.py` and `nbody_array_cpu.py` must remain beside the application. For either array CPU mode, also run `python -m pip install -r requirements-array-cpu.txt`; dictionary CPU does not require Numba. The optional dependency was tested with Numba 0.68.0. See [CPU mode details](ARRAY_CPU_README.txt). Tkinter ships with the standard Windows Python installer; other operating systems may require their distribution's Tk package. This release was tested locally with Python 3.14, NumPy 2.4.3, Matplotlib 3.10.8, Pillow 12.1.1, and python-dateutil 2.9.0.post0.
+`stable_orbits.py`, `nbody_array_cpu.py`, and `nbody_cpu_startup.py` must remain beside the application. The default multi-thread CPU backend requires Numba; select dictionary CPU if you install only `requirements.txt`. For either array CPU mode, also run `python -m pip install -r requirements-array-cpu.txt`; dictionary CPU does not require Numba. The optional dependency was tested with Numba 0.68.0. See [CPU mode details](ARRAY_CPU_README.txt). Tkinter ships with the standard Windows Python installer; other operating systems may require their distribution's Tk package. This release was tested locally with Python 3.14, NumPy 2.4.3, Matplotlib 3.10.8, Pillow 12.1.1, and python-dateutil 2.9.0.post0.
 
 In the main window, choose initial conditions, integrator, **dt**, **total simulated time T**, diagnostics sampling and CPU/GPU. Start the run to compute the trajectory and inspect the resulting tabs. Here **T is physical simulation time in code units**, not a step count. `Steps_set=ceil(T/dt)`; adaptive runs can execute more steps.
 
@@ -93,6 +108,8 @@ Energy figures distinguish bounded oscillations from drift. KDK can preserve ang
 | `interactive_nbody_lab.py` | Current interactive application; published under an English filename |
 | `stable_orbits.py` | Shared initial-condition catalog; 22 interactive choices including the app-specific free-fall entry |
 | `nbody_array_cpu.py` | Optional Numba single-/multi-thread CPU implementation |
+| `nbody_cpu_startup.py` | Background startup preparation for both CPU backends |
+| `docs/adaptive-stepping.md` | Current adaptive-controller rules, recovery, limits and interpretation |
 | `requirements-array-cpu.txt` | Optional dependency for array CPU modes |
 | `N body simulation.py` | Original console-driven program, retained for continuity |
 | `Galaxies collision simulation.py` | Earlier separate galaxy-collision visualization demo |
@@ -169,7 +186,10 @@ flowchart TD
     A["Initial masses, positions and velocities; G=1; isolated system"] --> B["Evaluate mutual gravity and net accelerations"]
     B --> C["Choose fixed dt or adaptive dt from current state/controller history"]
     C --> D["KDK: half kick, full drift, recompute gravity, half kick; or RK4 predicted stages and weighted update"]
-    D --> E["New positions/velocities; record final acceleration, energy and actual time"]
+    D --> H{"Work-step trial above threshold and below K?"}
+    H -- Yes --> I["Restore accepted start; shrink one band and retry"]
+    I --> D
+    H -- "No / other mode" --> E["Accept and record final state; flag work-step exceptions at K"]
     E --> F{"Reached total simulated time T?"}
     F -- No --> B
     F -- Yes --> G["Diagnostics, reference comparisons, plots and archive"]

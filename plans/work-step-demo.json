@@ -1,0 +1,28 @@
+{
+  "base": {
+    "initial_mode": "orbit",
+    "orbit_index": 4,
+    "seed": 1,
+    "particle_count": 3,
+    "dt": 0.0003,
+    "total_time": 1.3,
+    "sample_every": 10,
+    "compute_backend": "cpu_parallel",
+    "cpu_threads": 2,
+    "adaptive_enabled": true,
+    "adaptive_algorithm": "work_step",
+    "work_step_factor": 2.0,
+    "work_max_power": 1,
+    "work_threshold": 1.0
+  },
+  "runs": [
+    {
+      "label": "Work-step KDK cap demonstration",
+      "method": "1"
+    },
+    {
+      "label": "Work-step RK4 cap demonstration",
+      "method": "2"
+    }
+  ]
+}
