@@ -24,7 +24,16 @@ Development order; the [README](../README.md#completed-features) describes each 
 - [x] Complete the latest 240-run four-backend retest with background-load telemetry and published crossover brackets.
 - [x] Expand to 22 interactive orbit choices, including planar stars/triangles, a spatial trefoil and a nonsymmetric six-body orbit; record stability limitations.
 
+- [x] Implement and compare Original, Align, Average and Predicted normalized Work scale controllers with KDK/RK4 and optional Encounter Pre-probe.
+- [x] Preserve rollback/history isolation, capped-step exception reports and all-record time-weighted energy statistics.
+- [x] Add a configurable eccentric Kepler binary with an analytic position reference.
+- [x] Publish four-variant energy/drift/cost evidence, including counterexamples and Goggles ten-period cap tests.
+
 ## Next: validation and performance
+
+- [ ] Scan fixed dt and adaptive threshold/bands to compare achieved error at matched measured cost; current same-initial-dt comparisons do not establish equal-accuracy speedup.
+- [ ] Compare encounter Pre-probe on/off across deterministic encounter cases and longer durations; quantify drift, reversibility and probe overhead.
+- [ ] Investigate cancellation in Average and unequal-step extrapolation in Predicted without assuming either variant is generally better.
 
 - [ ] Refine the measured [CPU/GPU crossover brackets](reports/2026-10-20-backends/README.md) with more seeds, N values and thread counts.
 - [ ] Repeat representative GPU and adaptive timing measurements, reporting medians and spread.

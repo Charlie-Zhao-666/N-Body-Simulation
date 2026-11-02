@@ -1,77 +1,104 @@
-# Adaptive time stepping
+# Adaptive time stepping and Work scale
 
-This application uses global steps: all particles advance to the same accepted physical time. KDK and classical RK4 remain the underlying integrators. The controllers below choose or retry the step; they do not change Newtonian gravity, add softening, or introduce individual-particle stepping.
+Updated 2026-11-02. [中文说明](work-scale-zh.md) · [Energy/drift/cost results](reports/2026-11-02-work-scale/README.md).
 
-Inputs are current positions r_i, velocities v_i, masses m_i, G=1 in code units, the initial/maximum step h0, and the selected controller settings. Pairwise positions and masses determine net accelerations a_i. The integrator evaluates intermediate states as required, then produces a candidate position and velocity for every particle. Updated positions determine the endpoint accelerations. The simulation ends at the requested code time T; the final step may be shortened to reach T exactly.
+The project is currently comparing **Original, Align, Average and Predicted**, rather than declaring one universal winner. Work scale (earlier called Work skill) is an experimental global-step controller around KDK or classical RK4. All particles advance to the same accepted physical time. Gravity and the underlying integrators remain unchanged.
 
-## Experimental acceleration–velocity–step controller
+## Physical inputs and dependence
 
-UI name: **Acceleration × velocity × dt**. Plan code: `work_step`.
+Known at accepted time t_n: masses m_i, positions r_i,n, velocities v_i,n, and net gravitational accelerations a_i,n. Fixed parameters are G=1, end time T, initial/maximum step h0, shrink factor N>1, integer level cap K and dimensionless threshold q. Predicted additionally uses the preceding accepted acceleration a_i,n-1. There is no softening, collision treatment or external field; units are computational units.
 
-The project author's question behind this controller was whether motion-related information could guide step selection beyond acceleration magnitude alone. The implemented experiment monitors a velocity projection and tests candidate states before accepting them. Its usefulness must be assessed against position error, conservation error and actual runtime together; introducing a controller alone is not evidence of improved accuracy or efficiency.
+Positions and masses determine mutual gravity. A KDK/RK4 trial of duration h updates positions and velocities with the method's intermediate force evaluations. Trial positions determine the endpoint acceleration. The controller then selects an effective acceleration and tests the step. Only an accepted state becomes the starting data for the next physical-time update. Retrying is an inner calculation at the same starting time, not another physical-time advance.
 
-For each trial ending at t+h, calculate
+## Shared normalized indicator
 
-$$Q_i = |\mathbf a_i(t+h)\cdot\mathbf v_i(t+h)|\,h,\qquad Q=\max_i Q_i.$$
+$$Q_i=\frac{m_i}{S_E}\left(|\mathbf A_i\cdot\mathbf v_{i,n}|h+\frac12|\mathbf A_i|^2h^2\right),\qquad Q=\max_iQ_i,$$
 
-Here i identifies a particle; a_i is its total gravitational acceleration (code L/T²), v_i its velocity (code L/T), the dot denotes a scalar product, and h is the actual attempted step (code T), including any final-time clipping. Q has code L²/T² units. The threshold q_max has those same units; its default is 1 and it is adjustable through **Work trigger threshold** (`work_threshold`). It is not a percentage.
+$$S_E=E_{\rm kin}(0)+|E_{\rm pot}(0)|.$$
 
-The factor |a dot v| is equivalently acceleration magnitude times the magnitude of velocity projected onto acceleration. In the continuous equations, a dot v is the rate of change of a particle's specific kinetic energy. Multiplication by h is an endpoint-based indicator, not an exact integral over the step. No mass is included. In particular, this quantity is not the error in the system's total energy: kinetic and potential energy can exchange while total energy remains constant.
+Here i indexes particles, n indexes the accepted start, A_i is the chosen acceleration vector, v_i,n is always the **starting velocity**, and h is the actual attempted duration, including final-time clipping. The dot is a scalar product; |A| is its Euclidean norm. Mass, acceleration, velocity, h and energy have units M, L/time², L/time, time and ML²/time². Both contributions multiplied by m_i have energy units. Dividing by the positive, fixed initial scale S_E makes Q dimensionless and avoids dividing by nearly cancelled total energy.
 
-Step bands are h_k = h0 / N^k, with 0 <= k <= K. N (`work_step_factor`, default 2) must exceed 1; K (`work_max_power`, default 7) is a positive integer. k is retained between accepted steps, so h0/N^K is a cumulative lower bound on the nominal step, not a per-step retry counter.
+The intuitive displacement estimate is v_start h + A h²/2. The implementation takes the magnitude of the projected linear contribution and **adds** the positive quadratic contribution; it does not take the magnitude after adding signed terms. The quadratic term remains when A dot v_start vanishes.
 
-1. **Possible recovery:** At the current accepted state, compute P = max_i |a_i dot v_i|. If k>0 and P times the next larger nominal step h_(k-1) is strictly below q_max, propose recovery by one band. Equality does not trigger recovery. The proposal never exceeds h0.
-2. **Trial:** Preserve the complete accepted state and diagnostic caches. Advance all particles with KDK or RK4 using the candidate step. Evaluate Q at the completed trial endpoint.
-3. **Accept or shrink:** Accept Q <= q_max. If Q > q_max and k<K, restore the starting state, increase k by one, divide the nominal step by N, and retry. Rejected trials do not enter trajectory, velocity, energy, time or error-analysis records.
-4. **Cap behavior:** If Q > q_max at k=K, accept the step and continue at the capped band. Record the exception. This is deliberately a bounded-cost policy; the threshold is not a hard guarantee on every accepted step.
-5. **Record and repeat:** Save the accepted state, actual h and accumulated time. Diagnostics are sampled by accepted step count, plus the final state. Before the next trial, evaluate recovery from the newly accepted state.
+Q is a per-particle **energy-exchange scale**, not exact signed work, conserved-total-energy error, or an embedded truncation-error estimate. Threshold 0.01 does not mean 1% true energy error. Changing inertial frame changes velocities and normalization; dimensionless does not mean frame invariant.
+
+## Four acceleration choices
+
+| Method / plan identifier | Effective acceleration A_i | Data used |
+|---|---|---|
+| Original / `work_step` | a_i,trial | End acceleration with starting velocity |
+| Align / `work_step_align` | a_i,n | Starting acceleration with starting velocity |
+| Average / `work_step_average` | (a_i,n + a_i,trial)/2 | Arithmetic mean of endpoint vectors with starting velocity |
+| Predicted / `work_step_predicted` | a_i,n + (a_i,n − a_i,n-1)/2 | Two accepted accelerations with starting velocity |
+
+The same A_i is used in **both** Q terms. Average is neither an average of magnitudes nor an average of indicators; opposing endpoint vectors can cancel. Predicted uses **2.5** when previous=1 and current=2, with no additional average to 2.25. It ignores trial-end acceleration in Q and falls back to current acceleration on the first step. It does not scale the difference by the ratio of old/new time steps, so it is not a general variable-step derivative extrapolation. Rejected trials never enter its history. Actual force evaluations inside KDK/RK4 remain unchanged.
+
+## Rejection, recovery and cap
+
+Nominal bands are h_k=h0/N^k, with 0≤k≤K. k is retained between accepted steps; N is the step factor, not particle count. The nominal floor is h0/N^K. A final step can be shortened to land on T.
+
+1. Checkpoint the accepted physical state and force/diagnostic caches. Trial the retained band and calculate Q.
+2. If Q>q and k<K, restore the checkpoint, increase k and retry at h/N. Remember failed levels for this starting time to avoid repeatedly recovering to an already failed band.
+3. If Q<q/N and k>0, restore the same start and try one larger band, unless an encounter lock or failed-band record blocks growth. Re-evaluate Q at that larger trial. Equality does not trigger growth. Final-time clipping must actually permit a larger h.
+4. Accept when no retry is needed. If Q>q at k=K, **accept and flag** the exception. The cap bounds work; q is not a hard guarantee for every accepted step. Non-finite states still stop the run.
+5. Record accepted time, h, positions, velocities, accelerations and energy. Rejected and disposable probe states are excluded. Accepted positions/history feed the next force and indicator calculations.
+
+## Encounter Pre-probe
+
+The author's diagnostic problem was unexpected step recovery around a strong-acceleration encounter. Plotting acceleration, velocity projections, Q and dt together exposed how sampled geometry and a small indicator could allow recovery too early. A continuous peak need not coincide with a recorded sample. In a general N-body system, maximum acceleration does not imply zero velocity projected onto that acceleration.
+
+Pre-probe is an optional **encounter recovery guard**, not an energy correction:
+
+1. A candidate would be accepted at a larger band than the level at the beginning of the current outer step. The sampled global maximum acceleration magnitude is rising into or across that trial. If no lock exists, scout ahead.
+2. Restore the starting checkpoint. Run a disposable pass at the proposed larger h, measuring Q but ignoring its rejection rule. Track max_i |a_i| until a sampled peak has passed and the magnitude returns to/below its entry value, or until T/numerical failure ends scouting. This is not an exact continuous-peak locator.
+3. Discard scout states and restore the checkpoint again. Restore the **pre-recovery level**, then replay formally. Shrink/rejection remains available, but an encounter lock blocks growth. Replay therefore need not have one constant step size.
+4. Track the formal replay's own peak/exit. Unlock only after both reaching the scout's end time and passing the formal peak/return condition; reaching T ends the run normally. Scout and replay can follow different sampled paths.
+
+Predicted's scout maintains its own two-state history initialized from accepted history. Temporary accelerations never enter formal history. Retries and scouting restore physical state and caches. Probe calls and rejected attempts count toward cost.
 
 ```mermaid
 flowchart TD
-    A["Accepted r, v; masses and G fixed; retained level k"] --> B["Compute net a and P = max |a dot v|"]
-    B --> C{"k > 0 and P × next larger dt < threshold?"}
-    C -- Yes --> D["Recover one band: k = k - 1"]
-    C -- No --> E["Save accepted starting state"]
-    D --> E
-    E --> F["Clip candidate dt only at T; KDK/RK4 trial with intermediate force evaluations"]
-    F --> G["New r and v determine endpoint a; Q = max |a dot v| × actual dt"]
-    G --> H{"Q > threshold and k < K?"}
-    H -- Yes --> I["Restore starting state; k = k + 1; shrink dt by N"]
-    I --> F
-    H -- No --> J["Accept; if Q > threshold at K, record flagged interval"]
-    J --> L["Record actual time, state, energy and dt"]
-    L --> M{"Reached T?"}
-    M -- No --> A
-    M -- Yes --> Z["Plots, error analysis, export and adaptive-limit report"]
+    A["Accepted r_n, v_n; masses/G fixed; retained level and acceleration history"] --> B["Positions/masses → net a_n; retain h0/N^k"]
+    B --> C["Checkpoint; KDK/RK4 trial → new r,v → endpoint a"]
+    C --> D["Select variant A; calculate maximum normalized Q"]
+    D --> E{"Q > q and k < K?"}
+    E -- Yes --> F["Remember failed band; restore; k+1; shrink h"]
+    F --> C
+    E -- No --> G{"Q < q/N; growth allowed; larger h available?"}
+    G -- Yes --> H["Restore; k-1; trial larger h"]
+    H --> C
+    G -- No --> I{"Recovery on rising acceleration; pre-probe on; no lock?"}
+    I -- Yes --> J["Restore; scout: update gravity/motion → sampled peak and return"]
+    J --> L["Discard scout; restore physical state and prior level; lock growth"]
+    L --> C
+    I -- No --> M["Accept/record; flag Q > q at cap; update accepted history"]
+    M --> N["If locked: track formal peak/return; unlock after exit AND scout end"]
+    N --> O{"Accepted time reached T?"}
+    O -- No --> A
+    O -- Yes --> P["Energy statistics, drift, plots and export"]
 ```
 
-Red shading denotes accepted step intervals classified as over-threshold by their endpoint Q. It does not assert that Q was measured continuously throughout each shaded interval. Consecutive exceptions are grouped in **Adaptive limit report**, with times, steps, particle indices, peak indicator and level. NPZ metadata and JSON exports retain the controller settings and exception records. Cancellation is checked between attempts. Singular/non-finite states still stop the run; the K-cap policy does not make an undefined force acceptable.
+## Results and applicability
 
-## Other available controllers
+The target is deterministic close encounters and rapidly changing motion. Large acceleration alone does not establish large integration error. In the eight active cases, all four methods with pre-probe lowered energy RMS relative to the fixed run at the **same initial dt**. For RK4 they also lowered the magnitude of the finite-time fitted energy slope in all eight cases. For KDK energy improvements often accompanied larger fitted drift. These are findings for the tested settings, not all N-body initial conditions.
 
-| Mode | Main parameter | K slot | Decision |
-|---|---|---|---|
-| Fixed step | Initial dt | Not applicable | Keep h0; shorten only the final step |
-| Time-scale method (`timescale`) | Safety factor eta | Disabled | Minimum pairwise gravity/flyby timescale, scaled by eta |
-| Acceleration ratio (`acceleration_ratio`) | Acceleration multiplier N | Maximum cumulative exponent K | Per-star acceleration/reference power bands; choose the smallest global step |
-| Acceleration × velocity × dt (`work_step`) | Shrink/recovery factor N | Maximum cumulative exponent K | Trial-end Q test, rollback, recovery and flagged cap exceptions |
+Concentrating small steps around encounters can avoid paying for the smallest step everywhere. However, these runs do **not** establish a general equal-accuracy runtime advantage. Adaptive runs include additional steps, retries and scouting, and are usually slower than the coarse fixed baseline. The next comparison is error versus measured cost while scanning fixed dt and adaptive settings.
 
-The shared parameter slot preserves each controller's settings. Work-step also has its separate dimensional threshold field. An old plan selecting `energy_ratio` is rejected explicitly; it is not silently remapped to another controller. Historical EnergyRatio result labels are retained only for reading past records.
+Fixed-step KDK's time symmetry cannot simply be assigned to the whole state-dependent controller. Acceptance, recovery, history and locks are directional; averaging endpoint acceleration alone does not make these decisions reversible. Pre-probe does not restore a proven symmetric/symplectic adaptive scheme or guarantee bounded long-time energy error. RK4's much smaller measured error and slope are encouraging, but do not establish elimination of drift for arbitrary problems/durations.
 
-### Pairwise timescale method
+No variant consistently won against all the others. Predicted improves some RK4 cases and worsens others, and remains experimental. The Goggles ten-period KDK/Average test also shows that better energy conservation need not recover the original periodic shape. See [settings, ratios, counterexamples and source snapshots](reports/2026-11-02-work-scale/README.md).
 
-For pair separation r, relative speed u, and mu=G(m_i+m_j), the pairwise candidates are sqrt(r³/mu) and r/u when u>0. r has length units, u length/time, and mu length³/time², so both candidates are times. The controller takes the smallest eta-scaled candidate over all pairs and caps it at h0. The previous proposal additionally limits growth to 1.25 times its previous value. Diagnostic physical-time boundaries can shorten an accepted step in this mode. A very small required step triggers the existing safety stop; this mode does not use the discrete N/K bands.
+## Other controllers and compatibility
 
-### Acceleration-ratio method
+| Mode | Control |
+|---|---|
+| Fixed | h0, shortened only at T |
+| Time-scale / `timescale` | Minimum pairwise gravity/flyby time × eta, capped at h0 with growth limit |
+| Acceleration ratio / `acceleration_ratio` | Retained per-particle acceleration-reference bands; use the smallest global step |
+| Four Work scale modes | Shared dimensionless q, N/K, rollback/recovery and optional pre-probe |
 
-Each particle retains an acceleration-magnitude reference initialized from its initial net acceleration. A zero initial magnitude uses the system's initial nonzero scale; an all-zero initial state initializes references when nonzero acceleration first appears. The reference changes with that particle's discrete level, rather than being replaced after every tiny step. A ratio strictly above N triggers a higher power band; exact higher powers enter their own bands. Decreasing acceleration can recover bands. The global level is the largest per-particle level, capped at K, and dt = h0/N^level. The cap remains relative to h0 throughout the run. This is a heuristic based on known acceleration, without trial rejection; it is not a local truncation-error estimator.
+Pairwise timescale candidates are sqrt(r³/[G(m_i+m_j)]) and r/u for relative speed u>0. Both have time units. Timescale mode limits growth to 1.25 times its previous proposal and can clip at diagnostic time boundaries. Acceleration ratio retains per-particle references, caps the global exponent at K, and has no Work scale rejection rule.
 
-## Interpretation and validation
+Earlier `energy_ratio`, Work scale Test, Test align and Wide Protection cannot start new runs. Historical readers retain their identifiers. The dimensional endpoint a dot v controller in the October 20 history is distinct from today's mass-weighted normalized two-term definition; old records are not reinterpreted as current-formula measurements.
 
-- Large acceleration or large Q does not by itself establish a large integration error. Turning-point geometry can make a dot v small even while acceleration is substantial. This criterion does not resolve all close-encounter failure modes.
-- Q and its threshold depend on the code-unit convention and on velocities in the chosen inertial frame. They are not a universal, dimensionless tolerance transferable unchanged between rescaled or boosted problems.
-- State-dependent adaptive KDK should not automatically be attributed all long-time geometric properties of fixed-step leapfrog. Evaluate the actual implemented scheme.
-- Compare equal physical durations and initial conditions. Use analytic or independently checked references where available, and compare position errors and energy errors at matched cost. Conservation alone does not certify a trajectory.
-- The release regression compares retained modes before/after removal of EnergyRatio, checks all four compute backends, exercises rollback and cap reporting, and verifies main/batch settings and portable exports. See [machine-readable release checks](reports/work-step-release-checks.json). These checks establish implementation behavior for the tested cases, not universal stability or superiority.
-
-The integrators and pairwise timescale concepts are established numerical methods. The work-step controller is an experimental project choice developed from the author's questions, with AI-assisted implementation and testing; this repository does not claim it is a newly proven or uniquely original numerical method.
+The author proposed the questions, variants, debugging judgments and experimental choices. KDK/RK4 and gravity are established methods; implementation/testing are AI-assisted. This repository does not claim a proven novel integrator or an astrophysical discovery.
