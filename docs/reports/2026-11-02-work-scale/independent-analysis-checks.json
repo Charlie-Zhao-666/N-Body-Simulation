@@ -1,0 +1,9 @@
+{
+  "status": "passed",
+  "independent_energy_and_slope_recomputations": 19,
+  "K3_exactly_reproduced": true,
+  "K3_K4_K5_first_four_period_records_identical": true,
+  "K4_K5_fifth_cycle_sampled_paths_identical": true,
+  "predicted_cap_exceedances": 0,
+  "position_errors_computed": false
+}

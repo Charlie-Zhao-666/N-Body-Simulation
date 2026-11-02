@@ -1,0 +1,90 @@
+[
+  {
+    "integrator": "KDK",
+    "algorithm": "work_step",
+    "n": 8,
+    "energy_ratio_to_same_dt_fixed_range": [
+      0.00020854390316640806,
+      0.1844783847762201
+    ],
+    "energy_better_than_fixed": 8,
+    "absolute_drift_better_than_fixed": 3
+  },
+  {
+    "integrator": "KDK",
+    "algorithm": "work_step_align",
+    "n": 8,
+    "energy_ratio_to_same_dt_fixed_range": [
+      0.00020967954296185112,
+      0.282172051181852
+    ],
+    "energy_better_than_fixed": 8,
+    "absolute_drift_better_than_fixed": 0
+  },
+  {
+    "integrator": "KDK",
+    "algorithm": "work_step_average",
+    "n": 8,
+    "energy_ratio_to_same_dt_fixed_range": [
+      0.0002088647918496824,
+      0.1845668164220689
+    ],
+    "energy_better_than_fixed": 8,
+    "absolute_drift_better_than_fixed": 2
+  },
+  {
+    "integrator": "KDK",
+    "algorithm": "work_step_predicted",
+    "n": 8,
+    "energy_ratio_to_same_dt_fixed_range": [
+      0.0002758087278416706,
+      0.18713294050424498
+    ],
+    "energy_better_than_fixed": 8,
+    "absolute_drift_better_than_fixed": 1
+  },
+  {
+    "integrator": "RK4",
+    "algorithm": "work_step",
+    "n": 8,
+    "energy_ratio_to_same_dt_fixed_range": [
+      1.2919257271478849e-09,
+      0.017515444694240472
+    ],
+    "energy_better_than_fixed": 8,
+    "absolute_drift_better_than_fixed": 8
+  },
+  {
+    "integrator": "RK4",
+    "algorithm": "work_step_align",
+    "n": 8,
+    "energy_ratio_to_same_dt_fixed_range": [
+      1.9915174609859865e-09,
+      0.06466032527872698
+    ],
+    "energy_better_than_fixed": 8,
+    "absolute_drift_better_than_fixed": 8
+  },
+  {
+    "integrator": "RK4",
+    "algorithm": "work_step_average",
+    "n": 8,
+    "energy_ratio_to_same_dt_fixed_range": [
+      7.642815251326916e-10,
+      0.017515444694240472
+    ],
+    "energy_better_than_fixed": 8,
+    "absolute_drift_better_than_fixed": 8
+  },
+  {
+    "integrator": "RK4",
+    "algorithm": "work_step_predicted",
+    "n": 8,
+    "energy_ratio_to_same_dt_fixed_range": [
+      1.7503315798147638e-09,
+      0.021773538605005367
+    ],
+    "energy_better_than_fixed": 8,
+    "absolute_drift_better_than_fixed": 8
+  }
+]

@@ -1,0 +1,24 @@
+{
+  "original_average_suite_sha256": "501b1611e2892b18d437eebe550572ab3f317802ed4e3c7cd38f38cbe302c555",
+  "original_predicted_follow_up_sha256": "a19da8f9120ff42bcd8e79f7924ebb2da7660c2a2a14ece6f36ac48695a1a8c1",
+  "original_average_manifest_sha256": "ece996e6d0691106b3a9ebe2ba35d572e26c34369ff340e644282faec146eebc",
+  "original_predicted_manifest_sha256": "de7e8aef1a7afe1dc7dd165b519ec403bda76529a6c49bf8144147b5b41e7c68",
+  "public_energy_projection": "energy-results.json",
+  "production_source_sha256": "b92b6c3a68d51f0d2424eef06a0e75147ed0893e025e618767a9fefa0a12b7b0",
+  "published_source_sha256": "61b7f411600c20f803157a80ae8101baac25cc28218ba5e9a6f66f153712ec51",
+  "publication_only_change": "Manual export directory defaults to RUN_HISTORY_DIRECTORY.",
+  "snapshot_hashes": {
+    "source-snapshots/average/interactive_nbody_lab.py": "d20828218ce10c7dc99ba70b8e52f7f9ec0d33903ddc1bd4330fa61409197d94",
+    "source-snapshots/average/nbody_array_cpu.py": "3329f667ac8daae7c3b16210144885fc94e15f58f73b521077c66a3caaf66b2b",
+    "source-snapshots/average/nbody_cpu_startup.py": "a2af580670f88328e82b17e0d9aa118e24fd936437d1e79df187609434d2757b",
+    "source-snapshots/average/nbody_kepler.py": "d3a270eab2680b0f8b8ef1aaa1fffb7b36e92d735ad6d527ad86dbde1526e377",
+    "source-snapshots/average/stable_orbits.py": "a84383dcfd89b1357d90415cb4a78e70fbea3e5dd99d0d50eff91c4e2d1bc72a",
+    "source-snapshots/predicted/interactive_nbody_lab.py": "e958e54f7a7bbb3d09a7136029f21a79d2accdeafc99d96f3da62223828cb6ac",
+    "source-snapshots/predicted/nbody_array_cpu.py": "3329f667ac8daae7c3b16210144885fc94e15f58f73b521077c66a3caaf66b2b",
+    "source-snapshots/predicted/nbody_cpu_startup.py": "a2af580670f88328e82b17e0d9aa118e24fd936437d1e79df187609434d2757b",
+    "source-snapshots/predicted/nbody_kepler.py": "d3a270eab2680b0f8b8ef1aaa1fffb7b36e92d735ad6d527ad86dbde1526e377",
+    "source-snapshots/predicted/stable_orbits.py": "a84383dcfd89b1357d90415cb4a78e70fbea3e5dd99d0d50eff91c4e2d1bc72a"
+  },
+  "local_arrays_published": false,
+  "hash_policy": "Snapshot bytes preserved by .gitattributes -text; current published application uses LF."
+}

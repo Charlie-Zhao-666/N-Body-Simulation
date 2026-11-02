@@ -1,0 +1,87 @@
+{
+  "date": "2026-11-02",
+  "status": "passed",
+  "purpose": "Release behavior checks, not an accuracy or speed ranking",
+  "python": "3.12.14",
+  "numpy": "2.5.4",
+  "checks": {
+    "retired_modes_rejected_in_main_and_batch": true,
+    "acceleration_vectors_cancellation_predicted_2_5_and_first_step": true,
+    "disposable_probe_has_separate_history": true,
+    "four_variants_both_integrators_probe_rollback_export_and_cost": [
+      {
+        "method": "1",
+        "algorithm": "work_step",
+        "steps": 28829,
+        "rejected": 28,
+        "probe_trials": 21
+      },
+      {
+        "method": "1",
+        "algorithm": "work_step_align",
+        "steps": 28814,
+        "rejected": 40,
+        "probe_trials": 19
+      },
+      {
+        "method": "1",
+        "algorithm": "work_step_average",
+        "steps": 28811,
+        "rejected": 10,
+        "probe_trials": 21
+      },
+      {
+        "method": "1",
+        "algorithm": "work_step_predicted",
+        "steps": 28813,
+        "rejected": 38,
+        "probe_trials": 19
+      },
+      {
+        "method": "2",
+        "algorithm": "work_step",
+        "steps": 28828,
+        "rejected": 28,
+        "probe_trials": 21
+      },
+      {
+        "method": "2",
+        "algorithm": "work_step_align",
+        "steps": 28814,
+        "rejected": 38,
+        "probe_trials": 19
+      },
+      {
+        "method": "2",
+        "algorithm": "work_step_average",
+        "steps": 28811,
+        "rejected": 10,
+        "probe_trials": 21
+      },
+      {
+        "method": "2",
+        "algorithm": "work_step_predicted",
+        "steps": 28813,
+        "rejected": 36,
+        "probe_trials": 19
+      }
+    ],
+    "production_bitwise_parity": true,
+    "additional_backend_smoke": [
+      "cpu",
+      "cpu_parallel"
+    ],
+    "cap_accepts_and_flags_exceptions": [
+      {
+        "method": "1",
+        "flagged": 40
+      },
+      {
+        "method": "2",
+        "flagged": 40
+      }
+    ],
+    "published_plans_load": true,
+    "real_tk_main_batch_and_viewer": true
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "status": "passed",
+  "checks": {
+    "example_1_to_2_equals_2_5": true,
+    "independent_of_trial_end_and_first_step_fallback": true,
+    "probe_uses_its_own_two_state_history": true,
+    "existing_modes_bitwise_parity": [
+      {
+        "algorithm": "work_step",
+        "method": "1",
+        "probe": false,
+        "steps": 28691
+      },
+      {
+        "algorithm": "work_step",
+        "method": "1",
+        "probe": true,
+        "steps": 28829
+      },
+      {
+        "algorithm": "work_step",
+        "method": "2",
+        "probe": false,
+        "steps": 28693
+      },
+      {
+        "algorithm": "work_step",
+        "method": "2",
+        "probe": true,
+        "steps": 28828
+      },
+      {
+        "algorithm": "work_step_align",
+        "method": "1",
+        "probe": false,
+        "steps": 28653
+      },
+      {
+        "algorithm": "work_step_align",
+        "method": "1",
+        "probe": true,
+        "steps": 28814
+      },
+      {
+        "algorithm": "work_step_align",
+        "method": "2",
+        "probe": false,
+        "steps": 28652
+      },
+      {
+        "algorithm": "work_step_align",
+        "method": "2",
+        "probe": true,
+        "steps": 28814
+      },
+      {
+        "algorithm": "work_step_average",
+        "method": "1",
+        "probe": false,
+        "steps": 28662
+      },
+      {
+        "algorithm": "work_step_average",
+        "method": "1",
+        "probe": true,
+        "steps": 28811
+      },
+      {
+        "algorithm": "work_step_average",
+        "method": "2",
+        "probe": false,
+        "steps": 28658
+      },
+      {
+        "algorithm": "work_step_average",
+        "method": "2",
+        "probe": true,
+        "steps": 28811
+      }
+    ],
+    "accepted_and_rejected_indicators_match_history": true,
+    "exports_terms_and_probe_accounting": true,
+    "dictionary_array_parallel_backends": true,
+    "tk_forms_and_actual_viewer": "passed",
+    "raw_history_records_preserved": 582,
+    "readable_index_refreshed": true,
+    "history_display_rows_unchanged": true,
+    "current_source_matches_benchmark_except_docstrings": true
+  },
+  "final_source_sha256": "b92b6c3a68d51f0d2424eef06a0e75147ed0893e025e618767a9fefa0a12b7b0"
+}

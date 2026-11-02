@@ -1,0 +1,82 @@
+{
+  "status": "passed",
+  "checks": {
+    "retired_modes_rejected": true,
+    "mean_vector_before_dot_and_square": true,
+    "opposite_vector_cancellation_documented": true,
+    "original_and_align_bitwise_parity": [
+      {
+        "algorithm": "work_step",
+        "method": "1",
+        "probe": false,
+        "steps": 28691
+      },
+      {
+        "algorithm": "work_step",
+        "method": "1",
+        "probe": true,
+        "steps": 28829
+      },
+      {
+        "algorithm": "work_step",
+        "method": "2",
+        "probe": false,
+        "steps": 28693
+      },
+      {
+        "algorithm": "work_step",
+        "method": "2",
+        "probe": true,
+        "steps": 28828
+      },
+      {
+        "algorithm": "work_step_align",
+        "method": "1",
+        "probe": false,
+        "steps": 28653
+      },
+      {
+        "algorithm": "work_step_align",
+        "method": "1",
+        "probe": true,
+        "steps": 28814
+      },
+      {
+        "algorithm": "work_step_align",
+        "method": "2",
+        "probe": false,
+        "steps": 28652
+      },
+      {
+        "algorithm": "work_step_align",
+        "method": "2",
+        "probe": true,
+        "steps": 28814
+      }
+    ],
+    "average_traces_exports_replay_plans": [
+      {
+        "method": "1",
+        "steps": 28811,
+        "windows": 2
+      },
+      {
+        "method": "2",
+        "steps": 28811,
+        "windows": 2
+      }
+    ],
+    "dictionary_and_parallel_smoke": true,
+    "historical_rows_preserved": 579,
+    "raw_records_sha256": "6f946c0d6ef3c25e41e658c7aa71edaef3af0fcd9dc17415d99dd10cd2868d2e",
+    "tk_forms": "passed: actual hidden main form, batch editor, average viewer and diagnostic figure",
+    "final_source_compiled": true,
+    "final_source_matches_benchmark_except_labels_and_docs": true,
+    "readable_history_rebuilt": true,
+    "raw_history_records_preserved": 579,
+    "history_numeric_display_preserved": true,
+    "gpu_runtime_tested": false,
+    "gpu_note": "Numerical integration/force backend unchanged; CPU dictionary, array and parallel modes tested. No usable CuPy dependency in the isolated test runtime."
+  },
+  "source_sha256": "1d42f05d52869072ef58d09a863d657bcc37bc088fb214b6d44a311dc4eafa2d"
+}

@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "portable_source_only_change": true,
+  "support_modules_identical": true,
+  "relative_links_checked": 58,
+  "json_files_checked": 13,
+  "energy_rows": 112,
+  "numeric_values_preserved": true,
+  "four_methods_energy_better_in_all_eight_active_cases": true,
+  "rk4_drift_better_in_all_eight_active_cases": true,
+  "historical_public_run_snapshot_unchanged": true,
+  "source_ast_valid": true,
+  "new_files_scanned_for_local_paths_and_credential_patterns": true
+}

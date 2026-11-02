@@ -1,0 +1,589 @@
+[
+  {
+    "K": 3,
+    "energy_error": {
+      "version": 1,
+      "method": "full-record time-weighted RMS; exact squared piecewise-linear integral",
+      "rmse": 433.67387551773606,
+      "nrmse": 168.75233577804656,
+      "source_records": 1315711,
+      "time_start": 0.0,
+      "time_end": 104.648495256,
+      "initial_energy": -2.4301163090973117,
+      "energy_scale": 2.5698836909026883,
+      "rmse_units": "code energy",
+      "nrmse_units": "dimensionless"
+    },
+    "energy_drift": {
+      "version": 2,
+      "method": "physical-time weighted least squares; free intercept",
+      "sampling": "all saved records; no random sampling",
+      "weighting": "normalized trapezoidal node weights: half each adjacent physical-time interval; endpoints one side",
+      "objective": "sum_i w_i * (E_i-E_0-intercept-slope*(t_i-t_0))^2",
+      "fit_records": 1315711,
+      "weight_sum": 1.0,
+      "source_records": 1315711,
+      "time_start": 0.0,
+      "time_end": 104.648495256,
+      "initial_energy": -2.4301163090973117,
+      "energy_scale": 2.5698836909026883,
+      "slope": 9.293202796409961,
+      "intercept_offset_at_start": -202.08874625900586,
+      "fitted_energy_change": 972.5196887531538,
+      "normalized_slope": 3.616195872718918,
+      "normalized_fitted_energy_change": 378.4294566309925,
+      "residual_rmse": 168.83092028211982,
+      "r_squared": 0.7344031375264751,
+      "slope_units": "code energy / code time",
+      "normalized_slope_units": "1 / code time"
+    },
+    "seconds": 52.79292440000063,
+    "steps": 1315710,
+    "trials": 1319527,
+    "exceeded_steps": 11328,
+    "exceeded_intervals": [
+      {
+        "start_time": 42.828013978913276,
+        "end_time": 42.82827625420482,
+        "first_step": 667784,
+        "last_step": 669788,
+        "steps": 2005,
+        "level": 3,
+        "stars": [
+          2,
+          3
+        ],
+        "peak_indicator": 0.030699258307595307,
+        "peak_time": 42.82821150294831
+      },
+      {
+        "start_time": 42.82829012013046,
+        "end_time": 42.82855723541492,
+        "first_step": 669895,
+        "last_step": 671936,
+        "steps": 2042,
+        "level": 3,
+        "stars": [
+          2,
+          3
+        ],
+        "peak_indicator": 0.02813520925970224,
+        "peak_time": 42.828353563280785
+      },
+      {
+        "start_time": 59.685720649644466,
+        "end_time": 59.68667308176305,
+        "first_step": 959642,
+        "last_step": 966922,
+        "steps": 7281,
+        "level": 3,
+        "stars": [
+          1,
+          3
+        ],
+        "peak_indicator": 4047.167128896047,
+        "peak_time": 59.68594512066706
+      }
+    ],
+    "first_exceeded_cycles": 4.092558987508016,
+    "probe_windows": 76,
+    "max_level": 3,
+    "min_dt": 1.3081061906999998e-07,
+    "cycles": [
+      {
+        "cycle": 1,
+        "start": 0.0,
+        "end": 10.4648495256,
+        "energy_rmse": 2.0969518938964705e-05,
+        "energy_nrmse": 8.159715170455449e-06,
+        "max_abs_energy_offset": 8.911529939981122e-05
+      },
+      {
+        "cycle": 2,
+        "start": 10.4648495256,
+        "end": 20.9296990512,
+        "energy_rmse": 4.2698687920802405e-05,
+        "energy_nrmse": 1.6615027392856137e-05,
+        "max_abs_energy_offset": 0.0001116884815641761
+      },
+      {
+        "cycle": 3,
+        "start": 20.9296990512,
+        "end": 31.3945485768,
+        "energy_rmse": 6.318610775805835e-05,
+        "energy_nrmse": 2.458714687428668e-05,
+        "max_abs_energy_offset": 0.0001313002474998548
+      },
+      {
+        "cycle": 4,
+        "start": 31.3945485768,
+        "end": 41.8593981024,
+        "energy_rmse": 8.636537851270289e-05,
+        "energy_nrmse": 3.3606726568378856e-05,
+        "max_abs_energy_offset": 0.0001505418566165595
+      },
+      {
+        "cycle": 5,
+        "start": 41.8593981024,
+        "end": 52.324247628,
+        "energy_rmse": 0.00010000810476372982,
+        "energy_nrmse": 3.891542061524245e-05,
+        "max_abs_energy_offset": 0.00019169502540394845
+      },
+      {
+        "cycle": 6,
+        "start": 52.324247628,
+        "end": 62.7890971536,
+        "energy_rmse": 361.45091610251217,
+        "energy_nrmse": 140.64874507046278,
+        "max_abs_energy_offset": 8242.279914975246
+      },
+      {
+        "cycle": 7,
+        "start": 62.7890971536,
+        "end": 73.2539466792,
+        "energy_rmse": 661.4536148352456,
+        "energy_nrmse": 257.3865958123987,
+        "max_abs_energy_offset": 661.4536148352546
+      },
+      {
+        "cycle": 8,
+        "start": 73.2539466792,
+        "end": 83.7187962048,
+        "energy_rmse": 661.4536148352289,
+        "energy_nrmse": 257.3865958123922,
+        "max_abs_energy_offset": 661.4536148352472
+      },
+      {
+        "cycle": 9,
+        "start": 83.7187962048,
+        "end": 94.1836457304,
+        "energy_rmse": 661.4536148352228,
+        "energy_nrmse": 257.3865958123898,
+        "max_abs_energy_offset": 661.4536148352282
+      },
+      {
+        "cycle": 10,
+        "start": 94.1836457304,
+        "end": 104.648495256,
+        "energy_rmse": 661.4536148352139,
+        "energy_nrmse": 257.38659581238636,
+        "max_abs_energy_offset": 661.4536148352196
+      }
+    ],
+    "data": "goggles/K3.npz",
+    "baseline_reproduced": true,
+    "sampled_max_radius_by_cycle": [
+      1.140587325099493,
+      1.14060210507578,
+      1.14076415630182,
+      1.1439933441676067,
+      1.1883822803092898,
+      80.21895103011401,
+      349.7866173508135,
+      619.3527020914682,
+      888.9184039657164,
+      1158.4839285570133
+    ]
+  },
+  {
+    "K": 4,
+    "energy_error": {
+      "version": 1,
+      "method": "full-record time-weighted RMS; exact squared piecewise-linear integral",
+      "rmse": 0.0014035839569515862,
+      "nrmse": 0.000546166335044746,
+      "source_records": 1828940,
+      "time_start": 0.0,
+      "time_end": 104.648495256,
+      "initial_energy": -2.4301163090973117,
+      "energy_scale": 2.5698836909026883,
+      "rmse_units": "code energy",
+      "nrmse_units": "dimensionless"
+    },
+    "energy_drift": {
+      "version": 2,
+      "method": "physical-time weighted least squares; free intercept",
+      "sampling": "all saved records; no random sampling",
+      "weighting": "normalized trapezoidal node weights: half each adjacent physical-time interval; endpoints one side",
+      "objective": "sum_i w_i * (E_i-E_0-intercept-slope*(t_i-t_0))^2",
+      "fit_records": 1828940,
+      "weight_sum": 1.0,
+      "source_records": 1828940,
+      "time_start": 0.0,
+      "time_end": 104.648495256,
+      "initial_energy": -2.4301163090973117,
+      "energy_scale": 2.5698836909026883,
+      "slope": 2.3332024160715466e-06,
+      "intercept_offset_at_start": -1.52351816232705e-05,
+      "fitted_energy_change": 0.000244166121969551,
+      "normalized_slope": 9.079019507112379e-07,
+      "normalized_fitted_energy_change": 9.501057298191812e-05,
+      "residual_rmse": 0.001403689844538244,
+      "r_squared": 0.0025150903064187213,
+      "slope_units": "code energy / code time",
+      "normalized_slope_units": "1 / code time"
+    },
+    "seconds": 74.58436919999804,
+    "steps": 1828939,
+    "trials": 1836483,
+    "exceeded_steps": 38242,
+    "exceeded_intervals": [
+      {
+        "start_time": 59.68661109068691,
+        "end_time": 59.68672442501972,
+        "first_step": 1009767,
+        "last_step": 1018430,
+        "steps": 8664,
+        "level": 4,
+        "stars": [
+          1,
+          3
+        ],
+        "peak_indicator": 306.1554566037922,
+        "peak_time": 59.686667836339694
+      },
+      {
+        "start_time": 64.29710072882509,
+        "end_time": 64.29722070833807,
+        "first_step": 1194441,
+        "last_step": 1203612,
+        "steps": 9172,
+        "level": 4,
+        "stars": [
+          1,
+          3
+        ],
+        "peak_indicator": 5.7999909452583625,
+        "peak_time": 64.29715968517758
+      },
+      {
+        "start_time": 76.848120924445,
+        "end_time": 76.84818710154445,
+        "first_step": 1363278,
+        "last_step": 1368336,
+        "steps": 5059,
+        "level": 4,
+        "stars": [
+          1,
+          3
+        ],
+        "peak_indicator": 0.06307889475864073,
+        "peak_time": 76.84817636199145
+      },
+      {
+        "start_time": 76.84818911602821,
+        "end_time": 76.84825534545192,
+        "first_step": 1368491,
+        "last_step": 1373553,
+        "steps": 5063,
+        "level": 4,
+        "stars": [
+          1,
+          3
+        ],
+        "peak_indicator": 0.06301523806552502,
+        "peak_time": 76.8481998948244
+      },
+      {
+        "start_time": 98.49191753907266,
+        "end_time": 98.49198505044058,
+        "first_step": 1716084,
+        "last_step": 1721244,
+        "steps": 5161,
+        "level": 4,
+        "stars": [
+          1,
+          2
+        ],
+        "peak_indicator": 0.1001283959020924,
+        "peak_time": 98.49197633845239
+      },
+      {
+        "start_time": 98.49198580914225,
+        "end_time": 98.49205282342976,
+        "first_step": 1721303,
+        "last_step": 1726425,
+        "steps": 5123,
+        "level": 4,
+        "stars": [
+          1,
+          2
+        ],
+        "peak_indicator": 0.10237425096512803,
+        "peak_time": 98.49199437723874
+      }
+    ],
+    "first_exceeded_cycles": 5.703532663768979,
+    "probe_windows": 103,
+    "max_level": 4,
+    "min_dt": 1.3081061906999999e-08,
+    "cycles": [
+      {
+        "cycle": 1,
+        "start": 0.0,
+        "end": 10.4648495256,
+        "energy_rmse": 2.0969518938964705e-05,
+        "energy_nrmse": 8.159715170455449e-06,
+        "max_abs_energy_offset": 8.911529939981122e-05
+      },
+      {
+        "cycle": 2,
+        "start": 10.4648495256,
+        "end": 20.9296990512,
+        "energy_rmse": 4.2698687920802405e-05,
+        "energy_nrmse": 1.6615027392856137e-05,
+        "max_abs_energy_offset": 0.0001116884815641761
+      },
+      {
+        "cycle": 3,
+        "start": 20.9296990512,
+        "end": 31.3945485768,
+        "energy_rmse": 6.318610775805835e-05,
+        "energy_nrmse": 2.458714687428668e-05,
+        "max_abs_energy_offset": 0.0001313002474998548
+      },
+      {
+        "cycle": 4,
+        "start": 31.3945485768,
+        "end": 41.8593981024,
+        "energy_rmse": 8.636537851270289e-05,
+        "energy_nrmse": 3.3606726568378856e-05,
+        "max_abs_energy_offset": 0.0001505418566165595
+      },
+      {
+        "cycle": 5,
+        "start": 41.8593981024,
+        "end": 52.324247628,
+        "energy_rmse": 0.00010017954924114854,
+        "energy_nrmse": 3.898213354782598e-05,
+        "max_abs_energy_offset": 0.0001918866541470443
+      },
+      {
+        "cycle": 6,
+        "start": 52.324247628,
+        "end": 62.7890971536,
+        "energy_rmse": 0.004416889066903893,
+        "energy_nrmse": 0.0017187116609749884,
+        "max_abs_energy_offset": 51.87220918645781
+      },
+      {
+        "cycle": 7,
+        "start": 62.7890971536,
+        "end": 73.2539466792,
+        "energy_rmse": 6.530971310757536e-05,
+        "energy_nrmse": 2.5413489855112818e-05,
+        "max_abs_energy_offset": 0.11098215133225464
+      },
+      {
+        "cycle": 8,
+        "start": 73.2539466792,
+        "end": 83.7187962048,
+        "energy_rmse": 0.00012835756277462698,
+        "energy_nrmse": 4.994683737206043e-05,
+        "max_abs_energy_offset": 0.00022855019373979601
+      },
+      {
+        "cycle": 9,
+        "start": 83.7187962048,
+        "end": 94.1836457304,
+        "energy_rmse": 0.00026925957101318985,
+        "energy_nrmse": 0.00010477500284015214,
+        "max_abs_energy_offset": 0.0003423277432550442
+      },
+      {
+        "cycle": 10,
+        "start": 94.1836457304,
+        "end": 104.648495256,
+        "energy_rmse": 0.00027309004023150853,
+        "energy_nrmse": 0.00010626552524467902,
+        "max_abs_energy_offset": 0.0003610642125662089
+      }
+    ],
+    "data": "goggles/K4.npz",
+    "sampled_max_radius_by_cycle": [
+      1.140587325099493,
+      1.14060210507578,
+      1.14076415630182,
+      1.1439933441676067,
+      1.188384448724545,
+      1.1714732087614574,
+      1.210045045533876,
+      1.0474696612300805,
+      1.0337678683286255,
+      1.0804203078708365
+    ]
+  },
+  {
+    "K": 5,
+    "energy_error": {
+      "version": 1,
+      "method": "full-record time-weighted RMS; exact squared piecewise-linear integral",
+      "rmse": 0.0020427917489213607,
+      "nrmse": 0.000794896576896761,
+      "source_records": 4593238,
+      "time_start": 0.0,
+      "time_end": 104.648495256,
+      "initial_energy": -2.4301163090973117,
+      "energy_scale": 2.5698836909026883,
+      "rmse_units": "code energy",
+      "nrmse_units": "dimensionless"
+    },
+    "energy_drift": {
+      "version": 2,
+      "method": "physical-time weighted least squares; free intercept",
+      "sampling": "all saved records; no random sampling",
+      "weighting": "normalized trapezoidal node weights: half each adjacent physical-time interval; endpoints one side",
+      "objective": "sum_i w_i * (E_i-E_0-intercept-slope*(t_i-t_0))^2",
+      "fit_records": 4593238,
+      "weight_sum": 0.9999999999999998,
+      "source_records": 4593238,
+      "time_start": 0.0,
+      "time_end": 104.648495256,
+      "initial_energy": -2.4301163090973117,
+      "energy_scale": 2.5698836909026883,
+      "slope": -4.368975872152548e-05,
+      "intercept_offset_at_start": 0.0014105782352685791,
+      "fitted_energy_change": -0.004572067508305344,
+      "normalized_slope": -1.700067550768384e-05,
+      "normalized_fitted_energy_change": -0.0017790951102146478,
+      "residual_rmse": 0.0012901908157854894,
+      "r_squared": 0.5113590751401301,
+      "slope_units": "code energy / code time",
+      "normalized_slope_units": "1 / code time"
+    },
+    "seconds": 208.39780170000085,
+    "steps": 4593237,
+    "trials": 4634698,
+    "exceeded_steps": 46232,
+    "exceeded_intervals": [
+      {
+        "start_time": 59.686653303370036,
+        "end_time": 59.68668222043149,
+        "first_step": 1042037,
+        "last_step": 1064142,
+        "steps": 22106,
+        "level": 5,
+        "stars": [
+          1,
+          3
+        ],
+        "peak_indicator": 27.10425977515144,
+        "peak_time": 59.686667841695424
+      },
+      {
+        "start_time": 64.29686135228394,
+        "end_time": 64.29689291172593,
+        "first_step": 1309265,
+        "last_step": 1333390,
+        "steps": 24126,
+        "level": 5,
+        "stars": [
+          1,
+          3
+        ],
+        "peak_indicator": 0.6820771341200966,
+        "peak_time": 64.29687636152863
+      }
+    ],
+    "first_exceeded_cycles": 5.703536697528187,
+    "probe_windows": 388,
+    "max_level": 5,
+    "min_dt": 1.3081061906999999e-09,
+    "cycles": [
+      {
+        "cycle": 1,
+        "start": 0.0,
+        "end": 10.4648495256,
+        "energy_rmse": 2.0969518938964705e-05,
+        "energy_nrmse": 8.159715170455449e-06,
+        "max_abs_energy_offset": 8.911529939981122e-05
+      },
+      {
+        "cycle": 2,
+        "start": 10.4648495256,
+        "end": 20.9296990512,
+        "energy_rmse": 4.2698687920802405e-05,
+        "energy_nrmse": 1.6615027392856137e-05,
+        "max_abs_energy_offset": 0.0001116884815641761
+      },
+      {
+        "cycle": 3,
+        "start": 20.9296990512,
+        "end": 31.3945485768,
+        "energy_rmse": 6.318610775805835e-05,
+        "energy_nrmse": 2.458714687428668e-05,
+        "max_abs_energy_offset": 0.0001313002474998548
+      },
+      {
+        "cycle": 4,
+        "start": 31.3945485768,
+        "end": 41.8593981024,
+        "energy_rmse": 8.636537851270289e-05,
+        "energy_nrmse": 3.3606726568378856e-05,
+        "max_abs_energy_offset": 0.0001505418566165595
+      },
+      {
+        "cycle": 5,
+        "start": 41.8593981024,
+        "end": 52.324247628,
+        "energy_rmse": 0.00010017954924114854,
+        "energy_nrmse": 3.898213354782598e-05,
+        "max_abs_energy_offset": 0.0001918866541470443
+      },
+      {
+        "cycle": 6,
+        "start": 52.324247628,
+        "end": 62.7890971536,
+        "energy_rmse": 7.48441385118871e-05,
+        "energy_nrmse": 2.912355091276431e-05,
+        "max_abs_energy_offset": 0.5264472509256026
+      },
+      {
+        "cycle": 7,
+        "start": 62.7890971536,
+        "end": 73.2539466792,
+        "energy_rmse": 0.00014450541188480124,
+        "energy_nrmse": 5.6230331511245466e-05,
+        "max_abs_energy_offset": 0.0013336278101721
+      },
+      {
+        "cycle": 8,
+        "start": 73.2539466792,
+        "end": 83.7187962048,
+        "energy_rmse": 0.0009318088803531052,
+        "energy_nrmse": 0.0003625879582222654,
+        "max_abs_energy_offset": 0.0018620331281802294
+      },
+      {
+        "cycle": 9,
+        "start": 83.7187962048,
+        "end": 94.1836457304,
+        "energy_rmse": 0.003152832774109927,
+        "energy_nrmse": 0.0012268387029618739,
+        "max_abs_energy_offset": 0.004296070149806486
+      },
+      {
+        "cycle": 10,
+        "start": 94.1836457304,
+        "end": 104.648495256,
+        "energy_rmse": 0.005556179014474931,
+        "energy_nrmse": 0.0021620352057735684,
+        "max_abs_energy_offset": 0.006747097393501544
+      }
+    ],
+    "data": "goggles/K5.npz",
+    "sampled_max_radius_by_cycle": [
+      1.140587325099493,
+      1.14060210507578,
+      1.14076415630182,
+      1.1439933441676067,
+      1.188384448724545,
+      1.1714732087614574,
+      1.2132161394310568,
+      21.263376324534068,
+      45.050212567742115,
+      68.7808459427218
+    ]
+  }
+]

@@ -1,0 +1,66 @@
+[
+  {
+    "integrator": "KDK",
+    "algorithm": "work_step",
+    "wall_ratio_to_same_dt_fixed_min": 2.646440774533842,
+    "median": 3.9778572695624574,
+    "max": 6.635862704848094,
+    "caveat": "Single runs, different timing batches; not equal accuracy."
+  },
+  {
+    "integrator": "KDK",
+    "algorithm": "work_step_align",
+    "wall_ratio_to_same_dt_fixed_min": 2.660131044246594,
+    "median": 3.807901445322348,
+    "max": 6.612057830071801,
+    "caveat": "Single runs, different timing batches; not equal accuracy."
+  },
+  {
+    "integrator": "KDK",
+    "algorithm": "work_step_average",
+    "wall_ratio_to_same_dt_fixed_min": 2.759195384957936,
+    "median": 3.950970972031631,
+    "max": 6.861508437982042,
+    "caveat": "Single runs, different timing batches; not equal accuracy."
+  },
+  {
+    "integrator": "KDK",
+    "algorithm": "work_step_predicted",
+    "wall_ratio_to_same_dt_fixed_min": 2.838961281615425,
+    "median": 4.1273732439608715,
+    "max": 9.056432733496424,
+    "caveat": "Single runs, different timing batches; not equal accuracy."
+  },
+  {
+    "integrator": "RK4",
+    "algorithm": "work_step",
+    "wall_ratio_to_same_dt_fixed_min": 2.6257569994964824,
+    "median": 3.8175357463616932,
+    "max": 6.568669708372976,
+    "caveat": "Single runs, different timing batches; not equal accuracy."
+  },
+  {
+    "integrator": "RK4",
+    "algorithm": "work_step_align",
+    "wall_ratio_to_same_dt_fixed_min": 2.6682733698369825,
+    "median": 3.892818599512574,
+    "max": 6.603238411698031,
+    "caveat": "Single runs, different timing batches; not equal accuracy."
+  },
+  {
+    "integrator": "RK4",
+    "algorithm": "work_step_average",
+    "wall_ratio_to_same_dt_fixed_min": 2.8038952439285865,
+    "median": 3.970346798233484,
+    "max": 6.793027728666356,
+    "caveat": "Single runs, different timing batches; not equal accuracy."
+  },
+  {
+    "integrator": "RK4",
+    "algorithm": "work_step_predicted",
+    "wall_ratio_to_same_dt_fixed_min": 2.761287760145914,
+    "median": 4.086939751385779,
+    "max": 10.135951706727363,
+    "caveat": "Single runs, different timing batches; not equal accuracy."
+  }
+]
