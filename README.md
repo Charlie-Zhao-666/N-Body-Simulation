@@ -14,7 +14,7 @@ Listed by development stage, starting with the original model and continuing thr
 
 1. **Build the physical model:** Direct pairwise Newtonian gravity in 3D, with particle masses, positions and velocities, using computational units with G=1 and the original leapfrog update. Finite-precision point masses; no softening, collisions or merger prescription.
 2. **Add energy and conservation-error analysis:** Track energy, momentum, angular momentum and center-of-mass velocity; calculate RMSE and normalized energy RMSE. Conservation error alone does not certify trajectory accuracy.
-3. **Add seed control and known periodic initial conditions:** Random and specified seeds, followed by a catalog of known orbit initial conditions, now containing 22 options in the interactive application. Published numerical initial conditions have finite precision; the catalog is not a set of analytic position functions.
+3. **Add seed control and known periodic initial conditions:** Random and specified seeds, followed by a catalog of known orbit initial conditions, now containing 23 options in the interactive application. Published numerical initial conditions have finite precision; the catalog is not a set of analytic position functions.
 4. **Add the KDK / RK4 method choice:** Extend the existing leapfrog kick-drift-kick (KDK) program with classical fourth-order Runge-Kutta (RK4), sampling-rate options and end-of-run saving. Both methods were subsequently exercised in time-step and orbit comparisons.
 5. **Build the interactive acceleration view:** Introduce the Tkinter/Matplotlib interface, per-star net-acceleration records and star selection alongside energy curves. Subsequent interface updates added velocity records, per-step travel distance, a draggable timeline/time cursor, hover readouts, fixed/follow/fit-all views and actual-dt overlays. Energy can be displayed as E or E-E(0).
 6. **Add timescale-based adaptive stepping:** Choose the step from pairwise timescales with an adjustable safety factor eta. Adaptive stepping does not automatically retain the geometric properties of fixed-step leapfrog.
@@ -24,26 +24,46 @@ Listed by development stage, starting with the original model and continuing thr
 10. **Add batch Test mode:** Editable test configurations and importable JSON plans, sequential execution and automatic saving. Later reference-ordering refinements make the smallest dt the default reference while honoring an explicitly selected reference, which always runs first.
 11. **Add trajectory-error comparisons:** Reference-based position RMSE/NRMSE and optional comparison with the previous executed test. Comparisons require identical initial masses, positions, velocities and particle order, and use a common physical-time grid with cubic Hermite interpolation.
 
-12. **Add sampled energy-drift fitting:** Fit energy deviation against physical time, record the slope and normalized drift measures, and allow resampling/refitting. A near-zero slope does not by itself prove small excursions or return to the original energy.
+12. **Add energy-drift fitting:** Fit energy deviation against physical time and record signed/normalized slopes. This began with sampled fits; current default statistics use the full accepted record with physical-time weighting. A near-zero slope does not by itself prove small excursions or return to the original energy.
 13. **Optimize CPU computation:** Preserve the dictionary CPU baseline and add float64 NumPy-array state with Numba-compiled single-thread and multi-thread loops. Choose the backend and worker count in the interface. The direct-gravity calculation remains O(N^2); these modes reduce interpreter overhead and distribute target-particle work.
 14. **Expand the orbit catalog:** Add spatial and higher-body examples, most recently four-body rounded triangles and a seven-pointed star, a five-body spatial trefoil, and a six-body nonsymmetric choreography. Sources, finite-precision limitations and stability distinctions are documented; not all periodic orbits are stable.
 
 The early milestones are recorded in commits [4893a91](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/4893a91) (original model and conservation analysis), [c9f606c](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/c9f606c) (seed control), [5daddb6](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/5daddb6) (known orbits) and [ee2b2e4](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/ee2b2e4) (RK4 selection). Later interactive development was published together in [18a13f5](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/18a13f5); its stages above follow the development record, not separate per-feature Git timestamps.
 
-## Current adaptive-stepping update (2026-10-20)
+## Work scale research update (2026-11-02)
 
-The current application adds the experimental **Acceleration × velocity × dt** controller (`work_step`), with adjustable shrink/recovery factor **N**, cumulative level cap **K**, and **Work trigger threshold**. The separate total-energy-ratio rejection method has been removed from new simulations and batch plans. Historical result records remain readable.
+I am currently testing four variants of my experimental **Work scale** adaptive controller: **Original, Align, Average and Predicted**. The question is which choice best resolves close encounters when energy error, fitted drift and actual computation cost are considered together. There is no overall winner yet. The older conversational name was Work skill; the application uses Work scale.
 
-For each trial, the new controller evaluates **Q = max_i |a_i(trial) · v_i(trial)| h_actual** at the trial endpoint. Above the threshold, it restores the accepted starting state and retries one smaller step band. It can recover one larger band using the current accepted state. The minimum nominal step is **dt_initial / N^K**. **At K, an over-threshold trial is accepted and flagged**, rather than silently reducing the step indefinitely. Red interval shading and an **Adaptive limit report** identify these accepted exceptions.
+All four use starting velocity and the same mass-weighted, normalized two-term indicator:
 
-This is a dimensional, per-particle work-rate indicator, not total-energy error control, an embedded error estimate, or a guarantee of trajectory accuracy. It has no mass factor or energy normalization. See the [algorithm specification, equations, execution flow and limitations](docs/adaptive-stepping.md), [reproducible short demo plan](plans/work-step-demo.json), and [release verification](docs/reports/work-step-release-checks.json).
+$$Q=\max_i\frac{m_i}{S_E}\left(|\mathbf A_i\cdot\mathbf v_{i,\mathrm{start}}|h+\frac12|\mathbf A_i|^2h^2\right),\qquad S_E=E_{\mathrm{kin}}(0)+|E_{\mathrm{pot}}(0)|.$$
 
-Other updates in this version:
+Here h is the attempted step, m_i the particle mass, v_start the starting velocity, and A the selected effective acceleration. Both terms multiplied by mass have energy units; division by the fixed positive initial scale S_E makes Q dimensionless. The difference between variants is **which acceleration vector enters both terms**:
 
-- Multi-thread CPU is the default; both Numba CPU backends prepare in the background from script startup, before window construction. An early Start waits for readiness and remains cancellable. GPU initialization remains on demand.
-- Adaptive methods share the main parameter and K slots while retaining their own values; timescale mode displays Safety factor. The work-step threshold is independently adjustable.
-- E / delta-E and linear / symmetric-log energy views, linear energy-drift fits, mean actual dt / initial dt, full recorded points in zoomed time windows, and time-weighted energy RMSE/NRMSE from all records.
-- A per-star work-step indicator with an all-star maximum and threshold line, linked to the same time cursor. Limit intervals also appear on the relevant time plots.
+| Variant | Effective acceleration A |
+|---|---|
+| Original | Trial-end acceleration |
+| Align | Starting acceleration, aligned in time with starting velocity |
+| Average | Arithmetic mean of starting and trial-end acceleration vectors |
+| Predicted | Current accepted acceleration + half its difference from the preceding accepted acceleration |
+
+For Predicted, previous=1 and current=2 gives **2.5**, not 2.25; the first step uses current acceleration. Average can have vector cancellation; Predicted does not correct for unequal old/new time intervals. Neither construction guarantees a more accurate error estimate.
+
+If Q is too large, the controller restores the accepted start and retries at a smaller h0/N^k band. If Q is sufficiently small, it can retry a larger band. **At the K cap, over-threshold trials are accepted and flagged.** Q is a work scale, not measured total-energy error or a percentage-error tolerance.
+
+**Encounter Pre-probe** addresses premature recovery during a rising-acceleration encounter: scout ahead temporarily, restore the starting checkpoint, and replay with growth blocked through the encounter window. Further shrinking remains possible. Temporary scout states/history never enter the formal trajectory, and scouting counts toward cost. It does not restore a proven time-symmetric adaptive KDK or directly correct energy.
+
+Current evidence, with pre-probe enabled:
+
+- In eight deterministic cases that activated adaptation, **all four variants lowered energy RMS** relative to fixed stepping at the same initial dt. For **RK4**, all four also lowered the magnitude of the fitted finite-time energy slope in all eight cases.
+- **KDK:** smaller energy excursions can accompany worse fitted drift. State-dependent acceptance/recovery does not automatically retain fixed-step KDK's time symmetry.
+- **RK4:** the large energy-error and drift reductions are a promising result for the tested cases, not proof that long-time drift is eliminated in general.
+- **Cost:** concentrating small steps near encounters is potentially efficient compared with using a very small fixed step everywhere. The current same-initial-dt tests are usually slower than the coarse fixed baseline and do not establish a general equal-accuracy speedup.
+- **Variant ranking:** Predicted improves some RK4 cases but worsens others; Average and Align also have counterexamples. The Goggles ten-period test shows that improved energy conservation need not recover the original periodic shape.
+
+Read the [algorithm, exact rejection/recovery and pre-probe flow](docs/adaptive-stepping.md), [中文研究说明](docs/work-scale-zh.md), and [settings, results, caveats and source snapshots](docs/reports/2026-11-02-work-scale/README.md). Load the [eight-run KDK/RK4 four-variant plan](plans/work-scale-four-methods.json) for a short demonstration; it is not the full comparison suite. [Publication checks](docs/reports/2026-11-02-work-scale/publication-checks.json).
+
+The current code also includes the configurable eccentric Kepler binary with an analytic position reference, encounter/indicator diagnostics and portable exports. Retired Work scale Test/Align/Wide variants and total-energy-ratio stepping cannot start new runs; old records remain readable. The October 20 dimensional indicator is historical and differs from today's normalized formula.
 
 ## Quick start
 
@@ -54,7 +74,7 @@ python -m pip install -r requirements.txt -r requirements-array-cpu.txt
 python interactive_nbody_lab.py
 ```
 
-`stable_orbits.py`, `nbody_array_cpu.py`, and `nbody_cpu_startup.py` must remain beside the application. The default multi-thread CPU backend requires Numba; select dictionary CPU if you install only `requirements.txt`. For either array CPU mode, also run `python -m pip install -r requirements-array-cpu.txt`; dictionary CPU does not require Numba. The optional dependency was tested with Numba 0.68.0. See [CPU mode details](ARRAY_CPU_README.txt). Tkinter ships with the standard Windows Python installer; other operating systems may require their distribution's Tk package. This release was tested locally with Python 3.14, NumPy 2.4.3, Matplotlib 3.10.8, Pillow 12.1.1, and python-dateutil 2.9.0.post0.
+`stable_orbits.py`, `nbody_array_cpu.py`, `nbody_cpu_startup.py` and `nbody_kepler.py` must remain beside the application. The default multi-thread CPU backend requires Numba; select dictionary CPU if you install only `requirements.txt`. For either array CPU mode, also run `python -m pip install -r requirements-array-cpu.txt`; dictionary CPU does not require Numba. The optional dependency was previously tested with Numba 0.68.0. See [CPU mode details](ARRAY_CPU_README.txt). Tkinter ships with the standard Windows Python installer; other operating systems may require their distribution's Tk package. November 2 publication checks used Python 3.12.14 and NumPy 2.5.4; the earlier desktop setup used Python 3.14, NumPy 2.4.3, Matplotlib 3.10.8, Pillow 12.1.1 and python-dateutil 2.9.0.post0. Check records identify the tested environment rather than prescribing identical package versions on every host.
 
 In the main window, choose initial conditions, integrator, **dt**, **total simulated time T**, diagnostics sampling and CPU/GPU. Start the run to compute the trajectory and inspect the resulting tabs. Here **T is physical simulation time in code units**, not a step count. `Steps_set=ceil(T/dt)`; adaptive runs can execute more steps.
 
@@ -106,10 +126,13 @@ Energy figures distinguish bounded oscillations from drift. KDK can preserve ang
 | Path | Purpose |
 |---|---|
 | `interactive_nbody_lab.py` | Current interactive application; published under an English filename |
-| `stable_orbits.py` | Shared initial-condition catalog; 22 interactive choices including the app-specific free-fall entry |
+| `stable_orbits.py` | Shared initial-condition catalog; 23 interactive choices including free-fall and configurable Kepler-binary entries |
 | `nbody_array_cpu.py` | Optional Numba single-/multi-thread CPU implementation |
 | `nbody_cpu_startup.py` | Background startup preparation for both CPU backends |
-| `docs/adaptive-stepping.md` | Current adaptive-controller rules, recovery, limits and interpretation |
+| `nbody_kepler.py` | Configurable eccentric binary and analytic position reference |
+| `docs/adaptive-stepping.md` | Four Work scale variants, recovery, pre-probe, limits and interpretation |
+| `docs/work-scale-zh.md` | Chinese explanation of the current research and debugging process |
+| `docs/reports/2026-11-02-work-scale/` | Four-variant energy/drift/cost evidence and exact numerical source snapshots |
 | `requirements-array-cpu.txt` | Optional dependency for array CPU modes |
 | `N body simulation.py` | Original console-driven program, retained for continuity |
 | `Galaxies collision simulation.py` | Earlier separate galaxy-collision visualization demo |
@@ -129,7 +152,7 @@ For the original console program, `mplcursors` may also be needed; install it se
 
 ### Published data versus local outputs
 
-The current published snapshot contains **388 run records and 386 conservation plots**, plus 4 supplementary plots, exported on 2026-10-19. Two legacy records lack images. All run-history plots use lossless WebP. The [complete table](data/run-history/runs.md) and [compact table](data/run-history/README.md) provide clickable relative Plot links; `runs.dat` retains the aligned plain-text data. That snapshot is dated 2026-10-19. This 2026-10-20 update adds current application code and separate benchmark evidence; it does not rewrite the historical snapshot. Exact benchmark source is preserved with the new report.
+The current published snapshot contains **388 run records and 386 conservation plots**, plus 4 supplementary plots, exported on 2026-10-19. Two legacy records lack images. All run-history plots use lossless WebP. The [complete table](data/run-history/runs.md) and [compact table](data/run-history/README.md) provide clickable relative Plot links; `runs.dat` retains the aligned plain-text data. That snapshot is dated 2026-10-19. Subsequent updates add application code and separate benchmark evidence without rewriting the historical snapshot. Exact benchmark source is preserved with the new report.
 
 **Full local NPZ trajectories are not uploaded.** Historical batch JSON files retain their NPZ output names as provenance, but the raw arrays are not included. New local runs create a separate `graph and data/` folder beside the program, ignored by Git. `data/run-history/` is a published snapshot and is not overwritten by running the application. Keep full arrays locally or use a dedicated data archive for future releases. GitHub recommends keeping repositories small and blocks ordinary Git files above 100 MiB; see [GitHub's large-file guidance](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github).
 
@@ -186,10 +209,12 @@ flowchart TD
     A["Initial masses, positions and velocities; G=1; isolated system"] --> B["Evaluate mutual gravity and net accelerations"]
     B --> C["Choose fixed dt or adaptive dt from current state/controller history"]
     C --> D["KDK: half kick, full drift, recompute gravity, half kick; or RK4 predicted stages and weighted update"]
-    D --> H{"Work-step trial above threshold and below K?"}
-    H -- Yes --> I["Restore accepted start; shrink one band and retry"]
+    D --> H["Work modes: select effective A; calculate Q; choose shrink, recovery, pre-probe or acceptance"]
+    H -- "Shrink / recover" --> I["Restore accepted start; change one band; retry"]
     I --> D
-    H -- "No / other mode" --> E["Accept and record final state; flag work-step exceptions at K"]
+    H -- "Pre-probe" --> J["Scout peak/return; restore start and prior band; lock growth during replay"]
+    J --> D
+    H -- "Accept / other mode" --> E["Record accepted state; update encounter lock; flag Work Q exceptions at K"]
     E --> F{"Reached total simulated time T?"}
     F -- No --> B
     F -- Yes --> G["Diagnostics, reference comparisons, plots and archive"]

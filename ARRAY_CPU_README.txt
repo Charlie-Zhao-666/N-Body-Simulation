@@ -3,12 +3,12 @@ Array CPU modes
 Open the acceleration-interactive Python program as before. Both the main
 settings and Test mode now offer these Compute device choices:
 
-  CPU (dictionary / original)   Original implementation; no Numba required.
+  CPU (dictionary / original)   Existing implementation; still the default.
   CPU (array / single thread)   Compiled float64 force calculation on one thread.
-  CPU (array / multi-thread)    Default; compiled force calculation across worker threads.
+  CPU (array / multi-thread)    Compiled force calculation across worker threads.
   GPU (NVIDIA / CuPy)           Existing GPU implementation.
 
-Keep nbody_array_cpu.py and nbody_cpu_startup.py beside the interactive program.
+Keep nbody_array_cpu.py in the same folder as the interactive Python program.
 The array modes need Numba. It is already installed in the local Python used
 for this implementation. In another environment, use that environment's Python:
 
@@ -33,7 +33,7 @@ Initial dictionaries are copied to mass[N], position[N,3], velocity[N,3] arrays
 once. Time integration then stays in arrays. Each parallel worker owns one
 target particle's output; it reads all source particles at the same stage.
 The two array modes use the same summation order and no fast-math or softening.
-KDK, RK4, the current global adaptive-step controllers, diagnostics, playback, cancellation,
+KDK, RK4, the current adaptive-step controllers, diagnostics, playback, cancellation,
 recording controls, batch plans and position comparisons use existing paths.
 Compared with dictionary CPU, the force summation implementation differs, so
 floating-point results need not be bit-for-bit identical. Long chaotic
@@ -41,11 +41,9 @@ trajectories can amplify initially tiny differences.
 
 Timing and records
 ------------------
-The interactive script starts background preparation before importing plotting
-libraries or constructing the settings window. Multi-thread CPU prepares first,
-then single-thread CPU; KDK and RK4 reuse these kernels in the same process.
-An early Start waits for preparation (and can be cancelled). This work is outside
-Compute_time_s. Headless run_simulation callers still initialize on first use. Initialization time is recorded as
+First use in a new Python process compiles the selected array kernels. This
+may take a few seconds; it is outside Compute_time_s. Subsequent runs in the
+same process reuse the compiled kernels. Initialization time is recorded as
 initialization_seconds in result metadata and batch NPZ metadata.
 Compute_time_s still includes the simulation loop and its recording work;
 it is not a force-kernel-only benchmark. Plotting and file saving are excluded.
@@ -68,4 +66,5 @@ restoration; GUI worker delivery; all four backend exports; reference and
 previous-run position comparisons. Development results are in the project's
 Codex/2026-10-19-array-cpu folder, separate from scientific run history.
 
-Individual/local stepping was tested and removed from the current application. The current adaptive modes use global time steps.
+For individual local stepping, see LOCAL_STEPS_README.md. Its predictor/scheduler
+and diagnostic costs differ from the global array solver described above.

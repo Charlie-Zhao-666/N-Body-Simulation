@@ -8,3 +8,4 @@
 
 # Preserve exact benchmark source bytes for the published SHA256 manifest.
 docs/reports/2026-10-20-backends/source_snapshot/*.py -text -whitespace
+docs/reports/2026-11-02-work-scale/source-snapshots/** -text -whitespace

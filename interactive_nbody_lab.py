@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import PillowWriter
 from matplotlib.figure import Figure
 from matplotlib.ticker import (FixedLocator, FuncFormatter, NullLocator, LogLocator,
-                               MaxNLocator, ScalarFormatter, LogFormatterSciNotation)
+                               MaxNLocator, ScalarFormatter, LogFormatterSciNotation,
+                               Locator, SymmetricalLogLocator)
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from mpl_toolkits.mplot3d import proj3d
 from pathlib import Path
@@ -29,6 +30,8 @@ from dateutil.tz import gettz
 import queue
 import threading
 from stable_orbits import STABLE_ORBITS as BASE_STABLE_ORBITS
+from nbody_kepler import (KEPLER_BINARY_ORBIT, DEFAULT_ECCENTRICITY, binary_stars,
+                          binary_position_error, validate_eccentricity)
 
 # Extend only the interactive catalog; the original program and testers retain the base catalog.
 # Li & Liao (2019), Collisionless periodic orbits in the free-fall three-body problem.
@@ -53,6 +56,13 @@ STABLE_ORBITS = [*BASE_STABLE_ORBITS[:15], {
       for index, orbit in enumerate(BASE_STABLE_ORBITS[15:])]]
 
 G = 1.0
+STABLE_ORBITS.append(dict(KEPLER_BINARY_ORBIT, seed=len(STABLE_ORBITS)+1))
+
+
+def is_kepler_config(config):
+    index = config.get("orbit_index")
+    return (config.get("initial_mode") == "orbit" and isinstance(index, int)
+            and 0 <= index < len(STABLE_ORBITS) and STABLE_ORBITS[index].get("kepler_binary", False))
 
 COMPUTE_BACKENDS = {
     "cpu": "CPU (dictionary / original)",
@@ -61,12 +71,54 @@ COMPUTE_BACKENDS = {
     "gpu": "GPU (NVIDIA / CuPy)",
 }
 BACKEND_CODES = {label: code for code, label in COMPUTE_BACKENDS.items()}
+# Retired identifiers are retained only to read historical experiment metadata.
+WIDE_ALGORITHM = "work_skill_test_wide"
+WIDE_DEFINITION = "endpoint_max_displacement_work_wide_v1"
+
 ADAPTIVE_ALGORITHMS = {
     "timescale": "Time-scale method",
-    "acceleration_ratio": "Acceleration ratio (global)",
-    "work_step": "Acceleration × velocity × dt",
+    "acceleration_ratio": "Acceleration ratio",
+    "work_step": "work scale",
+    "work_step_align": "work scale align",
+    "work_step_average": "work scale average",
+    "work_step_predicted": "work scale predicted",
 }
 ADAPTIVE_CODES = {label: code for code, label in ADAPTIVE_ALGORITHMS.items()}
+WORK_ALGORITHM_CODES = ("work_step", "work_step_align", "work_step_average", "work_step_predicted")
+WORK_ALIGNED_CODES = ("work_step_align",)
+RETIRED_WORK_ALGORITHMS = {
+    "work_skill_test": "Work scale test",
+    "work_skill_test_align": "Work scale test align",
+    WIDE_ALGORITHM: "Work scale test — wide protection",
+}
+WORK_HISTORY_NAMES = ({code: ADAPTIVE_ALGORITHMS[code].capitalize() for code in WORK_ALGORITHM_CODES}
+                      | RETIRED_WORK_ALGORITHMS)
+WORK_HISTORY_CODES = tuple(WORK_HISTORY_NAMES)
+# Read old display names without changing algorithm IDs or immutable run records.
+WORK_HISTORY_ALIASES = {
+    "WorkStep": "work_step", "WorkSkillTest": "work_skill_test",
+    **{name.replace("scale", "skill"): code for code, name in WORK_HISTORY_NAMES.items()},
+}
+WORK_DEFAULT_THRESHOLD = 0.01
+WORK_DEFAULT_FACTOR = 10.0
+WORK_DEFAULT_MAX_POWER = 3
+WORK_PREPROBE_LABEL = "Encounter Pre-probe"
+WORK_LEGACY_DISPLACEMENT_DEFINITION = "constant_acceleration_displacement_v1"
+WORK_LEGACY_SYMMETRIC_DEFINITION = "endpoint_max_displacement_work_v1"
+WORK_DISPLACEMENT_DEFINITION = "start_state_displacement_work_v2"
+WORK_SYMMETRIC_DEFINITION = "same_time_endpoint_max_displacement_work_v2"
+WORK_AVERAGE_DEFINITION = "endpoint_average_acceleration_displacement_work_v1"
+WORK_PREDICTED_DEFINITION = "previous_state_extrapolated_acceleration_displacement_work_v1"
+
+
+def work_algorithm_from_definition(definition, fallback=None):
+    return {WORK_LEGACY_DISPLACEMENT_DEFINITION: "work_step",
+            WORK_LEGACY_SYMMETRIC_DEFINITION: "work_skill_test",
+            WIDE_DEFINITION: WIDE_ALGORITHM,
+            WORK_AVERAGE_DEFINITION: "work_step_average",
+            WORK_PREDICTED_DEFINITION: "work_step_predicted",
+            WORK_DISPLACEMENT_DEFINITION: "work_step_align",
+            WORK_SYMMETRIC_DEFINITION: "work_skill_test_align"}.get(definition, fallback)
 
 
 def velocity_acceleration_projections(accelerations, velocities):
@@ -115,7 +167,188 @@ def work_step_indicator(accelerations, velocities, step_sizes):
     return values
 
 
-def projection_export_arrays(accelerations, velocities, times=None, step_sizes=None):
+def normalized_work_power(accelerations, velocities, masses, energy_scale):
+    """Per-star m |a dot v| / (K0 + |U0|), in inverse code time."""
+    product = acceleration_velocity_projection_product(accelerations, velocities)
+    mass = np.asarray(masses, dtype=float)
+    scale = float(energy_scale)
+    if mass.ndim > 1 or (mass.ndim == 1 and (product.ndim == 0 or len(mass) != product.shape[-1])):
+        raise ValueError("Normalized work requires masses matching the star axis.")
+    if not np.isfinite(scale) or scale <= 0 or not np.isfinite(mass).all() or np.any(mass <= 0):
+        raise ValueError("Normalized work requires positive finite masses and initial energy scale.")
+    return product * (mass / scale)
+
+
+def normalized_work_step_indicator(accelerations, velocities, step_sizes, masses, energy_scale):
+    """Dimensionless per-star work scale; h[n] is the accepted step ending at t[n]."""
+    values = normalized_work_power(accelerations, velocities, masses, energy_scale)
+    h = np.asarray(step_sizes, dtype=float)
+    if (values.ndim < 1 or h.ndim != 1 or len(h) == 0 or len(h) != values.shape[0]
+            or not np.isfinite(h).all() or h[0] != 0 or np.any(h[1:] <= 0)):
+        raise ValueError("Work indicator requires matching accepted step sizes, with initial zero and positive later steps.")
+    # Match the controller's arithmetic order at threshold boundaries.
+    values *= h.reshape((len(h),) + (1,) * (values.ndim - 1))
+    values[0] = np.nan
+    return values
+
+
+def normalized_displacement_work(accelerations, initial_velocities, step_size, masses, energy_scale):
+    """m (|a_eff dot v_start| h + 0.5 |a_eff|² h²) / S_E.
+
+    The caller selects start, end, endpoint-mean or accepted-history-predicted
+    acceleration. This scale is not signed exact work or an integration error.
+    """
+    a = np.asarray(accelerations, dtype=float)
+    power = normalized_work_power(a, initial_velocities, masses, energy_scale)
+    h = np.asarray(step_size, dtype=float)
+    if not np.isfinite(h).all() or np.any(h < 0):
+        raise ValueError("Displacement work requires finite nonnegative step sizes.")
+    if h.ndim:
+        if h.ndim != 1 or power.ndim < 1 or len(h) != power.shape[0]:
+            raise ValueError("Displacement work step sizes must match the time axis.")
+        h = h.reshape((len(h),) + (1,) * (power.ndim - 1))
+    acceleration_squared = np.sum(a * a, axis=-1)
+    return (power + .5 * acceleration_squared * (np.asarray(masses) / energy_scale) * h) * h
+
+
+def select_work_acceleration(initial_acceleration, final_acceleration, *, aligned=False, average=False, predicted=False, previous_acceleration=None):
+    """Select a vector before projection/squaring; predicted ignores the trial end.
+
+    Prediction uses the current accepted a plus half its difference from the
+    preceding accepted a. Missing history uses current a; no dt-ratio scaling.
+    """
+    if sum((bool(aligned), bool(average), bool(predicted))) > 1:
+        raise ValueError("Choose only one acceleration-selection variant.")
+    a0, a1 = np.asarray(initial_acceleration), np.asarray(final_acceleration)
+    if a0.shape != a1.shape:
+        raise ValueError("Start/end accelerations must have the same shape.")
+    if predicted:
+        prior = a0 if previous_acceleration is None else np.asarray(previous_acceleration)
+        if prior.shape != a0.shape:
+            raise ValueError("Previous accepted acceleration must match the current shape.")
+        return a0 + .5*(a0-prior)
+    return .5*a0 + .5*a1 if average else a0 if aligned else a1
+
+
+def displacement_work_step_indicator(accelerations, velocities, step_sizes, masses, energy_scale, *, legacy=False, average=False, predicted=False):
+    """Accepted incoming h with start v and selected start/end/mean acceleration."""
+    a, v, h = np.asarray(accelerations), np.asarray(velocities), np.asarray(step_sizes, dtype=float)
+    if (a.shape != v.shape or a.ndim < 2 or a.shape[-1] != 3 or h.ndim != 1
+            or len(h) != a.shape[0] or len(h) == 0 or not np.isfinite(h).all()
+            or h[0] != 0 or np.any(h[1:] <= 0)):
+        raise ValueError("Displacement work requires matching state records and accepted steps, with initial zero.")
+    values = np.full(a.shape[:-1], np.nan, dtype=float)
+    if len(h) > 1:
+        prior = np.concatenate((a[:1], a[:-2]), axis=0) if predicted else None
+        chosen = select_work_acceleration(a[:-1], a[1:], aligned=not legacy and not average and not predicted,
+                                         average=average, predicted=predicted, previous_acceleration=prior)
+        values[1:] = normalized_displacement_work(chosen, v[:-1], h[1:], masses, energy_scale)
+    return values
+
+
+def displacement_work_step_terms(accelerations, velocities, step_sizes, masses, energy_scale, *, legacy=False, average=False, predicted=False):
+    """Decompose the actual selected monitor into its linear and quadratic h terms."""
+    a, v, h = np.asarray(accelerations), np.asarray(velocities), np.asarray(step_sizes, dtype=float)
+    if (a.shape != v.shape or a.ndim < 2 or a.shape[-1] != 3 or h.ndim != 1
+            or len(h) != a.shape[0] or len(h) == 0 or not np.isfinite(h).all()
+            or h[0] != 0 or np.any(h[1:] <= 0)):
+        raise ValueError("Work terms require matching state records and accepted steps, with initial zero.")
+    velocity_term = np.full(a.shape[:-1], np.nan, dtype=float)
+    acceleration_term = np.full_like(velocity_term, np.nan)
+    if len(h) > 1:
+        prior = np.concatenate((a[:1], a[:-2]), axis=0) if predicted else None
+        chosen = select_work_acceleration(a[:-1], a[1:], aligned=not legacy and not average and not predicted,
+                                         average=average, predicted=predicted, previous_acceleration=prior)
+        normalized_power = normalized_work_power(chosen, v[:-1], masses, energy_scale)
+        incoming = h[1:].reshape((len(h)-1,) + (1,) * (normalized_power.ndim-1))
+        velocity_term[1:] = normalized_power * incoming
+        acceleration_term[1:] = .5 * np.sum(chosen*chosen, axis=-1) * (np.asarray(masses)/energy_scale) * incoming**2
+    return velocity_term, acceleration_term
+
+
+def symmetric_displacement_work(initial_accelerations, initial_velocities, final_accelerations,
+                                final_velocities, step_size, masses, energy_scale, *, legacy=False):
+    """max(Q_forward, Q_reverse) per particle; reverse velocity signs cancel under abs.
+
+    Symmetric under swapping endpoints and negating both velocities. This does
+    not by itself make the integrator or the adaptive controller time reversible.
+    """
+    a0, v0, a1, v1 = (np.asarray(value) for value in
+                       (initial_accelerations, initial_velocities, final_accelerations, final_velocities))
+    if not (a0.shape == v0.shape == a1.shape == v1.shape):
+        raise ValueError("Symmetric work requires matching start/end acceleration and velocity shapes.")
+    forward = normalized_displacement_work(a1 if legacy else a0, v0, step_size, masses, energy_scale)
+    reverse = normalized_displacement_work(a0 if legacy else a1, v1, step_size, masses, energy_scale)
+    return np.maximum(forward, reverse)
+
+
+def bidirectional_work_step_indicators(accelerations, velocities, step_sizes, masses, energy_scale, *, legacy=False):
+    """Forward, reverse, and selected max for every accepted incoming step."""
+    a, v, h = np.asarray(accelerations), np.asarray(velocities), np.asarray(step_sizes, dtype=float)
+    forward = displacement_work_step_indicator(a, v, h, masses, energy_scale, legacy=legacy)
+    reverse = np.full_like(forward, np.nan)
+    if len(h) > 1:
+        reverse[1:] = normalized_displacement_work(a[:-1] if legacy else a[1:], v[1:], h[1:], masses, energy_scale)
+    return forward, reverse, np.maximum(forward, reverse)
+
+
+def symmetric_work_step_indicator(accelerations, velocities, step_sizes, masses, energy_scale, *, legacy=False):
+    return bidirectional_work_step_indicators(accelerations, velocities, step_sizes, masses, energy_scale, legacy=legacy)[2]
+
+
+def symmetric_work_step_terms(accelerations, velocities, step_sizes, masses, energy_scale, *, legacy=False):
+    """Qv/Qa from the winning direction, not independent maxima of the two terms."""
+    a, v, h = np.asarray(accelerations), np.asarray(velocities), np.asarray(step_sizes, dtype=float)
+    fv, fa = displacement_work_step_terms(a, v, h, masses, energy_scale, legacy=legacy)
+    forward, reverse, selected = bidirectional_work_step_indicators(a, v, h, masses, energy_scale, legacy=legacy)
+    rv, ra = np.full_like(fv, np.nan), np.full_like(fa, np.nan)
+    if len(h) > 1:
+        incoming = h[1:].reshape((len(h)-1,) + (1,)*(fv.ndim-1))
+        reverse_a = a[:-1] if legacy else a[1:]
+        rv[1:] = normalized_work_power(reverse_a, v[1:], masses, energy_scale)*incoming
+        ra[1:] = .5*np.sum(reverse_a**2, axis=-1)*(np.asarray(masses)/energy_scale)*incoming**2
+    use_reverse = reverse > forward
+    return dict(forward=forward, reverse=reverse, indicator=selected, reverse_selected=use_reverse,
+                velocity_term=np.where(use_reverse, rv, fv), acceleration_term=np.where(use_reverse, ra, fa))
+
+
+def displacement_work_convention(symmetric=False, legacy=False, average=False, predicted=False):
+    """Exact record indexing; retired symmetric definitions remain readable."""
+    if predicted:
+        return ("a_pred=a_i[n-1]+0.5*(a_i[n-1]-a_i[max(n-2,0)]); "
+                "m_i*(abs(a_pred dot v_i[n-1])*h[n]+0.5*|a_pred|^2*h[n]^2)/S_E; "
+                "accepted-history half difference, no extra average and no step-ratio rescaling; first step uses initial a; ")
+    if average:
+        return ("a_bar=(a_i[n-1]+a_i[n])/2; "
+                "m_i*(abs(a_bar dot v_i[n-1])*h[n]+0.5*|a_bar|^2*h[n]^2)/S_E; "
+                "arithmetic vector average before projection and squaring; magnitudes added, no cancellation between terms; ")
+    forward_a = "a_i[n]" if legacy else "a_i[n-1]"
+    reverse_a = "a_i[n-1]" if legacy else "a_i[n]"
+    forward = f"m_i*(abs({forward_a} dot v_i[n-1])*h[n]+0.5*|{forward_a}|^2*h[n]^2)/S_E"
+    reverse = f"m_i*(abs({reverse_a} dot v_i[n])*h[n]+0.5*|{reverse_a}|^2*h[n]^2)/S_E"
+    return ((f"max(Q_forward,Q_reverse); Q_forward={forward}; Q_reverse={reverse}; " if symmetric else forward + "; ")
+            + ("mixed-time states; " if legacy else "same-time acceleration and velocity at each evaluated endpoint; ")
+            + "magnitudes added, no cancellation; ")
+
+
+def work_algorithm_note(algorithm):
+    if algorithm in RETIRED_WORK_ALGORITHMS:
+        return RETIRED_WORK_ALGORITHMS[algorithm] + ": retired; available only in historical records."
+    average = algorithm == "work_step_average"
+    predicted = algorithm == "work_step_predicted"
+    acceleration = "a_pred" if predicted else "a_bar" if average else "a_start" if algorithm in WORK_ALIGNED_CODES else "a_end"
+    return (ADAPTIVE_ALGORITHMS[algorithm] + ": "
+            + ("a_pred=a_current+0.5*(a_current-a_previous), accepted states only; first step uses a_current; no dt-ratio rescaling or second average; " if predicted else "")
+            + ("a_bar=(a_start+a_end)/2, arithmetic vector average; " if average else "")
+            + f"Q=max_i m_i*(|{acceleration} dot v_start|*h+0.5*|{acceleration}|^2*h^2)/S_E. "
+            + "S_E=K(0)+|U(0)| stays fixed; work scale, not an energy-error estimate. "
+            + "Above threshold: restore and retry h/N. Below threshold/N: restore and retry N*h, capped at initial dt. "
+            + "Every enlarged trial is checked; failed larger bands block repeated growth at the same start. "
+            + "At maximum exponent K, accept and mark over-limit steps. Defaults: threshold=0.01, N=10, K=3. "
+            + ("Opposite endpoint accelerations can cancel in the vector average; no endpoint symmetry or reversibility is claimed." if average else ""))
+
+
+def projection_export_arrays(accelerations, velocities, times=None, step_sizes=None, metadata=None):
     a_along_v, v_along_a = velocity_acceleration_projections(accelerations, velocities)
     arrays = dict(acceleration_along_velocity=a_along_v, velocity_along_acceleration=v_along_a,
                  speed=np.hypot.reduce(np.asarray(velocities, dtype=float), axis=-1),
@@ -145,6 +378,33 @@ def projection_export_arrays(accelerations, velocities, times=None, step_sizes=N
                       work_step_indicator_max=np.max(indicator, axis=1) if indicator.ndim > 1 else indicator.copy(),
                       work_step_indicator_convention="abs(a[n] dot v[n]) * accepted h[n] ending at t[n]; "
                       "shape [time, star]; max is over all stars; initial state NaN; code length^2/time^2")
+        if metadata and metadata.get("work_indicator_normalization") == "initial_energy_scale":
+            masses = np.asarray([star["mass"] for star in metadata["initial_stars"]])
+            definition = metadata.get("work_indicator_definition")
+            legacy = definition in (WORK_LEGACY_DISPLACEMENT_DEFINITION, WORK_LEGACY_SYMMETRIC_DEFINITION, WIDE_DEFINITION)
+            predicted = definition == WORK_PREDICTED_DEFINITION
+            average = definition == WORK_AVERAGE_DEFINITION
+            displacement = definition in (WORK_DISPLACEMENT_DEFINITION, WORK_LEGACY_DISPLACEMENT_DEFINITION, WORK_AVERAGE_DEFINITION, WORK_PREDICTED_DEFINITION)
+            symmetric = definition in (WORK_SYMMETRIC_DEFINITION, WORK_LEGACY_SYMMETRIC_DEFINITION, WIDE_DEFINITION)
+            compute = symmetric_work_step_indicator if symmetric else displacement_work_step_indicator if displacement else normalized_work_step_indicator
+            normalized = compute(accelerations, velocities, incoming_steps, masses, metadata["energy_scale"],
+                                 **({"legacy": legacy, **({"average": True} if average else {}), **({"predicted": True} if predicted else {})} if symmetric or displacement else {}))
+            arrays.update(specific_work_step_indicator=indicator,
+                          specific_work_step_indicator_convention=arrays["work_step_indicator_convention"],
+                          work_step_indicator=normalized,
+                          work_step_indicator_max=np.max(normalized, axis=1),
+                          work_step_indicator_convention=
+                          (displacement_work_convention(symmetric, legacy, average, predicted) if symmetric or displacement else
+                           "m_i * abs(a_i[n] dot v_i[n]) * accepted h[n] / S_E; ") +
+                          "S_E=K(0)+abs(U(0)), fixed at initial state; dimensionless; initial state NaN")
+            if symmetric:
+                terms = symmetric_work_step_terms(accelerations, velocities, incoming_steps, masses, metadata["energy_scale"], legacy=legacy)
+                arrays.update(work_step_forward_indicator=terms["forward"],
+                              work_step_reverse_indicator=terms["reverse"],
+                              work_step_reverse_selected=terms["reverse_selected"],
+                              work_step_velocity_term=terms["velocity_term"],
+                              work_step_acceleration_term=terms["acceleration_term"],
+                              work_step_terms_convention="Qv and Qa come from the same winning direction; ties select forward; Qv+Qa=Q up to rounding; initial state NaN")
     return arrays
 
 
@@ -238,6 +498,35 @@ def acceleration_derivative_export_arrays(accelerations, times):
                 "nonuniform three-point centered interior and one-sided endpoints; "
                 "two records use secants; one record is NaN; no smoothing; "
                 "estimated from saved states, not analytic jerk or integration error")
+
+
+class EnergyLogLocator(Locator):
+    """Use the actual log transform for narrow ranges; decades for wide ranges."""
+    def __call__(self):
+        return self.tick_values(*self.axis.get_view_interval())
+
+    def tick_values(self, low, high):
+        low, high = sorted((float(low), float(high)))
+        transform = self.axis.get_transform()
+        core = transform.linthresh
+        narrow = low*high > 0 and max(abs(low), abs(high))/min(abs(low), abs(high)) < 10
+        if narrow or max(abs(low), abs(high)) <= core:
+            bounds = transform.transform(np.array([low, high]))
+            ticks = transform.inverted().transform(np.linspace(*bounds, 5))
+        else:
+            ticks = SymmetricalLogLocator(transform=transform, base=10).tick_values(low, high)
+            ticks = ticks[(ticks >= low) & (ticks <= high)]
+        # At machine-precision energy ranges, inverse-transforming adjacent
+        # positions can round to the same physical floating-point value.
+        return self.raise_if_exceeds(np.unique(ticks))
+
+
+def energy_log_tick_label(value, position, axis):
+    """Show physical energy, without an offset hiding the logarithmic labels."""
+    low, high = axis.get_ylim()
+    span, extent = abs(high-low), max(abs(low), abs(high))
+    digits = min(17, max(4, int(np.ceil(np.log10(extent/span)))+3)) if span and extent else 4
+    return f"{value:.{digits}g}"
 
 
 def set_physical_log_scale(axis, values, positive_only=False):
@@ -425,35 +714,55 @@ class AccelerationRatioController:
 
 
 class WorkStepController:
-    """Discrete dt0/N**level bands for max_i |a_i dot v_i| dt <= threshold.
+    """Discrete dt0/N**level bands for the normalized displacement work scale.
 
-    Recovery examines the accepted state and proposes at most one larger band.
-    The caller validates the trial and restores its state before shrinking.
+    Original uses end a/start v; align uses start a/start v; average uses the
+    arithmetic endpoint-mean acceleration vector with start velocity.
+    Predicted uses two accepted accelerations and start velocity, never trial-end a.
+    The caller restores the same starting state before retrying either direction.
     """
-    def __init__(self, max_dt, factor=2.0, max_power=7, threshold=1.0):
+    def __init__(self, max_dt, factor=WORK_DEFAULT_FACTOR, max_power=WORK_DEFAULT_MAX_POWER,
+                 threshold=WORK_DEFAULT_THRESHOLD, *, masses, energy_scale, aligned=False, average=False, predicted=False):
         self.max_dt = float(max_dt)
         self.factor = float(factor)
         self.max_power = int(max_power)
         self.threshold = float(threshold)
+        self.masses = np.asarray(masses, dtype=float)
+        self.energy_scale = float(energy_scale)
+        self.aligned = bool(aligned)
+        self.average = bool(average)
+        self.predicted = bool(predicted)
+        if sum((self.aligned, self.average, self.predicted)) > 1:
+            raise ValueError("Work controller must select exactly one optional variant.")
+        normalized_work_power(np.zeros((len(self.masses), 3)), np.zeros((len(self.masses), 3)),
+                              self.masses, self.energy_scale)
         self.level = 0
 
-    @staticmethod
-    def power(acceleration, velocity):
-        values = acceleration_velocity_projection_product(acceleration, velocity)
+    def powers(self, acceleration, velocity):
+        values = normalized_work_power(acceleration, velocity, self.masses, self.energy_scale)
         if values.ndim != 1 or len(values) == 0 or not np.isfinite(values).all():
             raise RuntimeError("Work-step control requires finite per-star acceleration and velocity.")
-        return float(np.max(values))
+        return values
+
+    def power(self, acceleration, velocity):
+        return float(np.max(self.powers(acceleration, velocity)))
+
+    def indicators(self, acceleration, initial_velocity, step_size, *, initial_acceleration, final_velocity, previous_acceleration=None):
+        chosen = select_work_acceleration(initial_acceleration, acceleration, aligned=self.aligned,
+                                          average=self.average, predicted=self.predicted, previous_acceleration=previous_acceleration)
+        values = normalized_displacement_work(chosen, initial_velocity, step_size, self.masses, self.energy_scale)
+        if values.ndim != 1 or len(values) == 0 or not np.isfinite(values).all():
+            raise RuntimeError("Work-step control requires finite per-star displacement work indicators.")
+        return values
 
     def step(self):
         return self.max_dt / self.factor ** self.level
 
-    def propose_recovery(self, power):
-        previous_level = self.level
-        if self.level > 0:
-            enlarged = self.max_dt / self.factor ** (self.level - 1)
-            if power * enlarged < self.threshold:
-                self.level -= 1
-        return self.step(), previous_level
+    def grow(self):
+        if self.level <= 0:
+            return False
+        self.level -= 1
+        return True
 
     def shrink(self):
         if self.level >= self.max_power:
@@ -462,30 +771,9 @@ class WorkStepController:
         return True
 
 
-def work_limit_report(metadata):
-    """Readable accepted-step intervals above the configured trial-end threshold."""
-    intervals = metadata.get("work_exceeded_intervals", [])
-    threshold = metadata.get("work_threshold", 1.0)
-    rows = ["加速度 × 沿加速度方向速度大小 × 步长：自适应报告",
-            f"N = {metadata['work_step_factor']:g}，K = {metadata['work_max_power']}，阈值 = {threshold:g}（代码 L²/T²）",
-            "判定使用试算结束时所有星中最大的 |a·v| × 实际步长。",
-            f"超过 {threshold:g}：撤回并缩小一档；达到 K 档后保持最小档继续，并记录超限。",
-            f"恢复使用当前已接受状态：乘以放大一档后的候选步长，小于 {threshold:g} 才尝试恢复。",
-            f"拒绝试算 {metadata.get('discarded_trial_steps', 0)} 次；"
-            f"缩小 {metadata.get('work_shrink_count', 0)} 档次；成功恢复 {metadata.get('work_grow_count', 0)} 次。",
-            f"超限接受 {metadata.get('work_exceeded_steps', 0)} 步，合并为 {len(intervals)} 段。",
-            "浅红色背景标出这些步覆盖的时间区间；不代表区间内每个连续时刻的指标均已测量。",
-            "时间为代码时间；步编号从 1 开始。", ""]
-    if not intervals:
-        rows.append("本次模拟没有在 K 档接受超限步。")
-    for number, item in enumerate(intervals, 1):
-        peak = f"{item['peak_indicator']:.9g}" if item['peak_indicator'] is not None else "超过浮点表示范围"
-        rows.extend([f"第 {number} 段：t = {item['start_time']:.12g} → {item['end_time']:.12g}",
-                     f"  已接受步 {item['first_step']}–{item['last_step']}，共 {item['steps']} 步；"
-                     f"计算阶段：最小步长档 k = {item['level']}（K = {metadata['work_max_power']}）。",
-                     f"  涉及恒星：{', '.join(map(str, item['stars']))}；最大指标 {peak}，"
-                     f"对应步末 t = {item['peak_time']:.12g}。", ""])
-    return "\n".join(rows)
+
+
+
 
 
 def Ek(s1):
@@ -640,12 +928,35 @@ RUN_HISTORY_DIRECTORY = Path(__file__).resolve().parent / "graph and data"
 LEGACY_HISTORY_PATH = Path(__file__).resolve().parent / "运行记录" / "运行记录.csv"
 RUN_HISTORY_COLUMNS = [
     "Date", "Time", "Method", "Initial_condition", "dt_initial",
-    "Steps_set", "Steps_actual", "Adaptive_method", "Adaptive_param", "K", "E_RMSE", "E_nRMSE", "E_drift_k", "E_drift_k_norm", "Position_RMSE", "Position_NRMSE",
+    "Steps_set", "Steps_actual", "Adaptive_method", "Work_threshold", "Adaptive_param", "K", "E_RMSE", "E_nRMSE", "E_drift_k", "E_drift_k_norm", "Position_RMSE", "Position_NRMSE",
     "Px_RMSE", "Py_RMSE", "Pz_RMSE", "Lx_RMSE", "Ly_RMSE", "Lz_RMSE",
     "Vcmx_RMSE", "Vcmy_RMSE", "Vcmz_RMSE", "Device", "Device_model", "Compute_time_s", "Sim_T", "Plot",
 ]
-_HISTORY_FLOAT_COLUMNS = {4, 8, *range(10, 25), 27, 28}
+_HISTORY_FLOAT_COLUMNS = {4, 8, 9, *range(11, 26), 28, 29}
 _HISTORY_INDEX_LOCK = threading.RLock()
+
+
+def work_history_method(algorithm, preprobe=False):
+    name = WORK_HISTORY_NAMES[algorithm]
+    return name + (f" with {WORK_PREPROBE_LABEL}" if preprobe else "")
+
+
+def _history_work_fields(row, report=None):
+    """Backfill only recorded work settings; never assume a historical threshold."""
+    row = list(row)
+    method = str(row[7])
+    name = method.split(" with ", 1)[0]
+    names = WORK_HISTORY_ALIASES | {value: key for key, value in WORK_HISTORY_NAMES.items()}
+    if name not in names:
+        return row
+    report = report if isinstance(report, dict) else {}
+    fallback = names[name]
+    algorithm = work_algorithm_from_definition(report.get("work_indicator_definition"), fallback)
+    preprobe = report.get("work_preprobe_enabled", " with " in method)
+    row[7] = work_history_method(algorithm, preprobe)
+    if row[8] == "NA" and report.get("work_threshold") is not None:
+        row[8] = report["work_threshold"]
+    return row
 
 
 def _history_drift_values(analysis):
@@ -664,7 +975,7 @@ def build_run_history_record(metadata, diagnostics):
     started = datetime.fromisoformat(metadata["run_started_at"])
     error = metadata["energy_error"]["rmse"]
     scale = metadata["energy_scale"]
-    adaptive_method = adaptive_param = adaptive_k = "NA"
+    adaptive_method = adaptive_param = adaptive_k = work_threshold = "NA"
     if metadata["adaptive_enabled"]:
         if metadata["adaptive_algorithm"] == "acceleration_ratio":
             adaptive_method, adaptive_param, adaptive_k = ("AccelerationRatio",
@@ -673,18 +984,22 @@ def build_run_history_record(metadata, diagnostics):
         elif metadata["adaptive_algorithm"] == "energy_ratio":
             adaptive_method, adaptive_param, adaptive_k = ("EnergyRatio", metadata["energy_relative_tolerance"],
                                                           metadata.get("energy_max_rejections", "NA"))
-        elif metadata["adaptive_algorithm"] == "work_step":
-            adaptive_method, adaptive_param, adaptive_k = ("WorkStep", metadata["work_step_factor"],
-                                                          metadata["work_max_power"])
+        elif metadata["adaptive_algorithm"] in WORK_ALGORITHM_CODES:
+            adaptive_method = work_history_method(metadata["adaptive_algorithm"], metadata.get("work_preprobe_enabled", False))
+            adaptive_param, adaptive_k = metadata["work_step_factor"], metadata["work_max_power"]
+            work_threshold = metadata.get("work_threshold", "NA")
         else:
             adaptive_method, adaptive_param = "Timescale", metadata["adaptive_eta"]
     initial = (metadata["case_name"] if metadata["config"]["initial_mode"] == "orbit"
                else str(metadata["seed"]))
     row = [started.strftime("%Y-%m-%d"), started.strftime("%H:%M:%S"),
            _history_english(metadata["method_name"]), _history_english(initial), metadata["dt"],
-           metadata["requested_steps"], metadata["steps"], adaptive_method, adaptive_param, adaptive_k,
+           metadata["requested_steps"], metadata["steps"], adaptive_method, work_threshold, adaptive_param, adaptive_k,
            error, error / scale if scale else np.nan,
            *_history_drift_values(metadata.get("energy_drift")), "NA", "NA"]
+    position_error = metadata.get("position_error")
+    if position_error and position_error.get("reference_kind") == "analytic_kepler":
+        row[15:17] = [position_error["rmse"], position_error["nrmse"]]
     for key in ("momentum", "angular_momentum", "com_v"):
         values = np.asarray([item[key] for item in diagnostics], dtype=float)
         row.extend(float(RMSE(values[:, axis])) for axis in range(3))
@@ -765,23 +1080,25 @@ def _history_expand_row(row):
         row = row[:24] + ["NA"] + row[24:]
     if len(row) == 28:
         row = row[:12] + ["NA", "NA"] + row[12:]
-    if len(row) != 30:
-        raise ValueError("Run summary must have 30 columns (or the legacy 22/23/25/27/28-column format).")
+    if len(row) == 30:
+        row.insert(8, "NA")
+    if len(row) != 31:
+        raise ValueError("Run summary must have 31 columns (or the legacy 22/23/25/27/28/30-column format).")
     return row
 
 
 def _archive_display_row(row):
-    row = _history_expand_row(row)
+    row = _history_work_fields(_history_expand_row(row))
     display = []
     for i, value in enumerate(row):
-        if i == 8 and row[7] in ("AccelerationRatio", "LocalAccelerationRatio") and value != "NA":
+        if i == 9 and row[7].split(" with ", 1)[0] in ("AccelerationRatio", "LocalAccelerationRatio", *WORK_HISTORY_NAMES.values()) and value != "NA":
             display.append(f"{float(value):.1f}")
-        elif i == 8 and row[7] == "Timescale" and value != "NA":
+        elif i == 9 and row[7] == "Timescale" and value != "NA":
             from decimal import Decimal
             text = format(Decimal(str(value)), "f")
             display.append(text.rstrip("0").rstrip(".") if "." in text else text)
         elif (i in _HISTORY_FLOAT_COLUMNS and value != "NA"
-              and not (i in (14, 15) and str(value).startswith("reference_"))):
+              and not (i in (15, 16) and str(value).startswith("reference_"))):
             display.append(f"{float(value):.6e}")
         else:
             display.append(" ".join(str(value).split()))
@@ -803,7 +1120,7 @@ def _rebuild_run_history(directory=None):
     entries.sort(key=lambda item: (item["row"][0], item["row"][1], item["run_id"]))
     rows = []
     for entry in entries:
-        row = _history_expand_row(entry["row"])
+        row = _history_work_fields(_history_expand_row(entry["row"]), entry.get("work_step_report"))
         # Backfill display columns from the fit saved with this run; keep records immutable.
         analysis = entry.get("energy_drift")
         if analysis is None and row[-1] != "NA":
@@ -814,20 +1131,23 @@ def _rebuild_run_history(directory=None):
                     raise ValueError("Energy drift analysis run ID mismatch.")
                 analysis = saved_fit.get("analysis")
         if analysis is not None:
-            row[12:14] = _history_drift_values(analysis)
+            row[13:15] = _history_drift_values(analysis)
         position_path = directory / "_position_comparisons" / _archive_record_path(directory, entry["run_id"]).name
-        if position_path.exists():
+        analytic_position = entry.get("position_error") or {}
+        if analytic_position.get("reference_kind") == "analytic_kepler":
+            row[15:17] = [analytic_position["rmse"], analytic_position["nrmse"]]
+        elif position_path.exists():
             position = json.loads(position_path.read_text(encoding="utf-8"))
             if position["run_id"] != entry["run_id"]:
                 raise ValueError("Position comparison run ID mismatch.")
-            row[14:16] = [position["rmse"], position["nrmse"]]
+            row[15:17] = [position["rmse"], position["nrmse"]]
         rows.append(_archive_display_row(row))
     # Keep stored filenames relative; build file URLs only for the current display location.
     display_rows = [row[:-1] + [((directory / row[-1]).resolve().as_uri()
                                if row[-1] != "NA" else "NA")] for row in rows]
     widths = [max(len(title), *(len(row[i]) for row in display_rows)) if display_rows else len(title)
               for i, title in enumerate(RUN_HISTORY_COLUMNS)]
-    numeric = _HISTORY_FLOAT_COLUMNS | {5, 6, 9}
+    numeric = _HISTORY_FLOAT_COLUMNS | {5, 6, 10}
     def aligned(row):
         return "  ".join(value.rjust(widths[i]) if i in numeric else value.ljust(widths[i])
                          for i, value in enumerate(row)).rstrip()
@@ -837,11 +1157,13 @@ def _rebuild_run_history(directory=None):
         "# dt_initial is the initial dt / adaptive upper limit; Steps_set is the initial step count.",
         "# Conserved-quantity RMSE uses diagnostic samples after t=0, measured against the initial value.",
         "# S=initial kinetic energy+abs(initial potential energy); E_nRMSE=E_RMSE/S; E_drift_k=OLS slope of E(t)-E(0) [energy/time]; E_drift_k_norm=E_drift_k/S [1/time].",
-        "# Position_RMSE / Position_NRMSE compare with the selected batch reference; disabled or pending = NA.",
+        "# Position_RMSE / Position_NRMSE use analytic Kepler positions for the adjustable binary; other cases use the selected batch reference (disabled/pending = NA).",
         "# Position metrics use a uniform time grid including t=0; previous-test comparisons are in batch_*_comparisons.dat.",
         "# reference_N marks the reference row; N counts completed other-test comparisons against it in the same batch.",
         "# _position_comparisons/*.json retain reference identity, interval, normalization and full-precision results.",
         "# Adaptive_param is eta for Timescale or N for either ratio method; K is used by both global and local ratio modes.",
+        "# Work_threshold is the recorded work-scale trigger threshold; non-work methods or unavailable historical values use NA.",
+        "# Work methods append 'with Encounter Pre-probe' when enabled; 'align' identifies same-time formulas.",
         "# NA: unavailable/undefined. Device_model: recorded hardware model; legacy models use documented provenance.",
         "# Plot contains the image file URL for that row; NA means no saved figure is available.",
         "# URL clicking in this text file depends on the editor; index.html provides clickable Plot links.",
@@ -865,7 +1187,7 @@ def _rebuild_run_history(directory=None):
             "<style>body{font:14px system-ui;margin:24px;color:#172437}table{border-collapse:collapse;"
             "font:13px monospace;white-space:nowrap}th,td{padding:9px 12px;border:1px solid #dce2eb}"
             "th{position:sticky;top:0;background:#e9eff8}tr:nth-child(even){background:#f6f8fb}"
-            "th:nth-child(9),td:nth-child(9){text-align:right;font-variant-numeric:tabular-nums}"
+            "th:nth-child(9),td:nth-child(9),th:nth-child(10),td:nth-child(10){text-align:right;font-variant-numeric:tabular-nums}"
             "a{color:#155db0}</style><h1>N-body run history</h1>"
             "<p><a href='runs.dat'>Aligned text table</a> &middot; "
             "<a href='README.txt'>Column definitions and precision</a></p>"
@@ -894,25 +1216,27 @@ def _rebuild_run_history(directory=None):
              "information when available. Legacy CSV timestamps have unknown timezone.\n"
              "dt_initial is the chosen initial dt / adaptive maximum. Steps_set is ceil(Sim_T/dt_initial).\n"
              "Steps_actual counts completed integration steps, including a shortened final step.\n"
-             "Adaptive_method is NA, Timescale, AccelerationRatio (global), or EnergyRatio. Adaptive_param is eta for Timescale\n"
+             "Adaptive_method is NA, Timescale, AccelerationRatio, Work scale, Work scale align, Work scale average, or Work scale predicted. Work methods append 'with Encounter Pre-probe' when enabled. Historical work names are resolved from each run's saved formula definition; the original record is not rewritten. EnergyRatio rows are retained. Work_threshold precedes Adaptive_param and contains the recorded trigger threshold for work methods, otherwise NA. Adaptive_param is eta for Timescale\n"
              "or the acceleration trigger N for AccelerationRatio; K is its maximum cumulative exponent.\n"
-             "For WorkStep, Adaptive_param is N and K is the maximum cumulative exponent; max_i |a_i dot v_i| dt uses a configurable threshold (default 1, code L^2/T^2), saved in the run report JSON. Rejected trials are restored; recovery grows one band at a time.\n"
+             "For all work methods, Adaptive_param is N and K is the maximum cumulative exponent; defaults: dimensionless threshold 0.01, N=10, K=3. S_E=K(0)+abs(U(0)) stays fixed. Work scale uses Q=max_i m_i*(|a_end dot v_start|*h+0.5*|a_end|^2*h^2)/S_E (constant_acceleration_displacement_v1). Work scale align uses start acceleration in both terms (start_state_displacement_work_v2). Legacy records without a formula definition used |a dot v| h, normalized only when their normalization marker is present. Recovery policy trial_end_rollback_retry_v1: Q<threshold/N rejects the trial, restores its start and retries with N times dt; enlarged trials are rechecked. A failed larger band at the same start blocks repeated growth retries. Older records may use accepted-state recovery for the next step.\n"
+             "Work scale average uses a_bar=(a_start+a_end)/2 as a vector in both terms with v_start; definition endpoint_average_acceleration_displacement_work_v1. Retired historical Work scale test takes max_i max(Q_forward_i,Q_reverse_i), with end a/start v forward and start a/end v reverse (endpoint_max_displacement_work_v1). Work scale test align uses start a/start v forward and end a/end v reverse (same_time_endpoint_max_displacement_work_v2). Both retain the same N/K retry and optional pre-probe policy. Endpoint symmetry of the monitor does not guarantee reversibility of the full adaptive algorithm. Exported forward/reverse indicators and winning-direction terms identify the actual control quantity.\n"
+             "Work scale predicted uses a_pred=a_current+0.5*(a_current-a_previous) from accepted states; first step uses initial a. Both terms use that vector, with v_current. No additional averaging or dt-ratio correction. Definition previous_state_extrapolated_acceleration_displacement_work_v1.\n"
              "Historical EnergyRatio records describe a removed experimental method; it is not available for new runs.\n"
-             "All three fields are NA for fixed dt. Historical LocalAccelerationRatio rows describe a retired method.\n"
+             "All four adaptive fields are NA for fixed dt. Work_threshold is NA when a historical threshold was not recorded; it is never replaced with today's default. Historical LocalAccelerationRatio rows describe a retired method.\n"
              "New energy RMSE integrates squared E(t)-E(0) over all saved step intervals, using linear interpolation in time.\n"
              "Energy statistics are identified by energy_error in each new JSON record; historical rows retain their original definitions.\n"
              "Other conserved-quantity RMSE excludes the initial diagnostic sample and uses diagnostic records.\n"
-             "Position_RMSE and Position_NRMSE use the selected batch reference and a common uniform time grid.\n"
+             "For the adjustable Kepler binary, Position_RMSE and Position_NRMSE are automatic, using analytic Kepler positions on 20001 uniform physical-time samples (endpoints included). The numerical trajectory is interpolated with positions and velocities by cubic Hermite interpolation. RMSE is sqrt(mean over stars and times of squared 3D position distance); NRMSE divides by the initial RMS radius (1+e)/2. The position_error metadata retains eccentricity, constants and the reference definition. These analytic metrics take priority over optional batch-reference overlays. Other cases use the selected batch reference and a common uniform time grid.\n"
              "Disabled, pending, or unavailable position metrics are NA; reference_N marks a reference and its completed comparison count.\n"
              "_position_comparisons/ stores comparison overlays without altering immutable original run records.\n"
              "Comparison definitions and previous-test results are in the companion batch JSON and comparison DAT.\n"
              "E_nRMSE divides energy RMSE by initial kinetic energy + abs(initial potential energy).\n"
-             "E_drift_k is the signed OLS slope of E(t)-E(0), in code energy/code time; a free intercept is fitted.\n"
+             "E_drift_k is the signed fitted slope of E(t)-E(0), in code energy/code time; a free intercept is fitted.\n"
              "E_drift_k_norm divides that slope by initial kinetic energy + abs(initial potential energy), in 1/code time.\n"
              "These are drift rates, not RMSE values. Positive/negative slopes describe upward/downward fitted trends.\n"
-             "A small slope alone does not prove conservation; compare fit quality and sensitivity to sampling.\n"
-             "Fits use uniform random physical times and interpolate the full saved energy trajectory.\n"
-             "Sampling count, seed, fit interval and residual statistics are retained in the run's energy_drift JSON.\n"
+             "A small slope alone does not prove conservation; compare fit quality and time resolution.\n"
+             "New fits (version 2) use every saved record and trapezoidal physical-time node weights (half each adjacent interval; one side at endpoints), normalized to sum to 1.\n"
+             "Fit record count, weighting convention, interval and weighted residual statistics are retained in the run's energy_drift JSON. Version 1 fits used random physical-time samples.\n"
              "Old records are displayed with slopes from their archived fit, or NA if no fit was saved.\n"
              "The archived fit is retained when an interactive refit is saved separately; indexes do not silently replace it.\n"
              "P, L, and Vcm mean total momentum, total angular momentum, and center-of-mass velocity.\n"
@@ -952,7 +1276,7 @@ def migrate_legacy_history(directory=None, legacy_path=None):
             run_id = "legacy_" + hashlib.sha256(identity.encode("utf-8")).hexdigest()
             row = _history_expand_row([_history_english(value) for value in original])
             # Strings retain every original digit; the readable table formats only a display copy.
-            for column in _HISTORY_FLOAT_COLUMNS | {5, 6, 9}:
+            for column in _HISTORY_FLOAT_COLUMNS | {5, 6, 10}:
                 if str(row[column]).lower() in {"nan", "inf", "-inf", ""}:
                     row[column] = "NA"
             path = _archive_record_path(directory, run_id)
@@ -1013,26 +1337,17 @@ def save_run_history(record, directory=None):
                                             "started_at": metadata["run_started_at"], "source": "simulation",
                                             "device_model_source": "runtime hardware query",
                                             "energy_error": metadata.get("energy_error"),
+                                            "position_error": metadata.get("position_error"),
                                             "energy_drift": energy_drift_summary(metadata["energy_drift"])
                                                 if "energy_drift" in metadata else None,
                                             "work_step_report": {key: value for key, value in metadata.items()
-                                                if key.startswith("work_")} if metadata.get("adaptive_algorithm") == "work_step" else None})
+                                                if key.startswith("work_")} if metadata.get("adaptive_algorithm") in WORK_ALGORITHM_CODES else None})
         if "energy_drift" in metadata:
             drift_path = directory / (Path(entry["row"][-1]).stem + "_energy_drift.json")
             _archive_write(drift_path, json.dumps(
                 dict(run_id=run_id, analysis=metadata["energy_drift"]),
                 ensure_ascii=False, allow_nan=False, indent=2).encode("utf-8"), replace=False)
             metadata["energy_drift_path"] = str(drift_path.resolve())
-        if metadata.get("adaptive_algorithm") == "work_step":
-            report_path = directory / (Path(entry["row"][-1]).stem + "_adaptive_limits.json")
-            report = dict(run_id=run_id, report=work_limit_report(metadata),
-                          parameters={"N": metadata["work_step_factor"], "K": metadata["work_max_power"],
-                                      "threshold": metadata.get("work_threshold", 1.0)},
-                          exceeded_steps=metadata.get("work_exceeded_steps", 0),
-                          intervals=metadata.get("work_exceeded_intervals", []))
-            _archive_write(report_path, json.dumps(report, ensure_ascii=False, allow_nan=False,
-                                                   indent=2).encode("utf-8"), replace=False)
-            metadata["work_limit_report_path"] = str(report_path.resolve())
         path = rebuild_run_history(directory)
     record["row"][1] = entry["row"][1]
     record["row"][-1] = entry["row"][-1]
@@ -1314,12 +1629,97 @@ class SimulationCancelled(Exception):
     """Signal user cancellation while preserving the previous successful view."""
 
 
+class WorkEncounterWindow:
+    """Track a sampled global-|a| peak and its return to the entry level."""
+    def __init__(self, start_time, acceleration):
+        self.start_time = self.peak_time = float(start_time)
+        self.reference = self.peak = self.magnitude(acceleration)
+        self.descended = False
+
+    @staticmethod
+    def magnitude(acceleration):
+        return float(np.max(np.hypot.reduce(np.asarray(acceleration), axis=-1)))
+
+    def observe(self, current_time, acceleration):
+        value = self.magnitude(acceleration)
+        tolerance = 64*np.finfo(float).eps*max(self.peak, self.reference, np.finfo(float).tiny)
+        if value > self.peak + tolerance:
+            self.peak, self.peak_time = value, float(current_time)
+            self.descended = False
+        elif value < self.peak - tolerance:
+            self.descended = True
+        return self.descended and value <= self.reference + tolerance
+
+
+def probe_work_encounter(start_time, end_time, step, initial_acceleration,
+                         advance, current_velocity, controller, cancel=None, progress=None, prior_acceleration=None):
+    """Disposable forward pass: ignore Q rejection, locate a peak and its exit.
+
+    The caller owns and restores the physical checkpoint in a finally block.
+    No positions, velocities, energies or diagnostic samples are committed here.
+    """
+    window = WorkEncounterWindow(start_time, initial_acceleration)
+    previous_acceleration = np.asarray(initial_acceleration).copy()
+    preceding_acceleration = np.asarray(initial_acceleration if prior_acceleration is None else prior_acceleration).copy()
+    current_time, steps, attempts, exceeded, peak_q = float(start_time), 0, 0, 0, 0.
+    status, last_report = "end_time_before_exit", time.perf_counter()
+    while current_time < end_time:
+        if cancel is not None and cancel.is_set():
+            raise SimulationCancelled()
+        h = min(float(step), end_time-current_time)
+        if h <= 0 or current_time+h <= current_time:
+            raise RuntimeError("Pre-probe dt is smaller than floating-point time resolution.")
+        velocity = current_velocity()
+        attempts += 1
+        try:
+            acceleration, energy = advance(h)
+            indicator = float(np.max(controller.indicators(
+                acceleration, velocity, h, initial_acceleration=previous_acceleration,
+                final_velocity=None, previous_acceleration=preceding_acceleration)))
+        except (FloatingPointError, ZeroDivisionError):
+            status = "numerical_failure_replay_required"
+            break
+        except RuntimeError as exc:
+            if not any(word in str(exc).lower() for word in ("non-finite", "nonfinite", "coincident")):
+                raise
+            status = "numerical_failure_replay_required"
+            break
+        current_time = min(current_time+h, end_time)
+        steps += 1
+        exceeded += indicator > controller.threshold
+        peak_q = max(peak_q, indicator)
+        complete = window.observe(current_time, acceleration)
+        preceding_acceleration = previous_acceleration
+        previous_acceleration = np.asarray(acceleration).copy()
+        now = time.perf_counter()
+        if progress is not None and now-last_report >= .15:
+            progress(h)
+            last_report = now
+        if complete:
+            status = "peak_and_return"
+            break
+    return dict(start_time=float(start_time), probe_end_time=current_time,
+                probe_peak_time=window.peak_time, probe_peak_acceleration=window.peak,
+                entry_acceleration=window.reference, probe_steps=steps,
+                probe_trial_evaluations=attempts,
+                probe_over_threshold_steps=int(exceeded), probe_peak_Q=peak_q,
+                status=status)
+
+
 def validate_config(config):
     """Validate parameters before computation to catch invalid input early."""
     result = dict(config)
+    preprobe = result.get("work_preprobe_enabled", False)
+    if not isinstance(preprobe, (bool, np.bool_)):
+        raise ValueError("Pre-probe switch must be true or false.")
+    result["work_preprobe_enabled"] = bool(preprobe)
     result.setdefault("adaptive_algorithm", "acceleration_ratio")
+    if result["adaptive_algorithm"] in RETIRED_WORK_ALGORITHMS:
+        raise ValueError("This Work scale test algorithm has been retired. Choose Work scale, Work scale align, Work scale average, or Work scale predicted.")
+    result.pop("work_protection_before", None)
+    result.pop("work_protection_after", None)
     if result["adaptive_algorithm"] not in ADAPTIVE_ALGORITHMS:
-        raise ValueError("Select time-scale, acceleration-ratio, or acceleration × velocity × dt stepping. Energy-ratio stepping has been removed.")
+        raise ValueError("Select time-scale, acceleration-ratio, Work scale, Work scale align, Work scale average, or Work scale predicted stepping.")
     # Discard inactive settings carried by older plans for retained methods.
     for retired_key in ("energy_relative_tolerance", "energy_max_rejections"):
         result.pop(retired_key, None)
@@ -1366,6 +1766,8 @@ def validate_config(config):
         index = result.get("orbit_index")
         if not isinstance(index, int) or not 0 <= index < len(STABLE_ORBITS):
             raise ValueError("Select a known orbit.")
+    result["binary_eccentricity"] = (validate_eccentricity(result.get("binary_eccentricity", DEFAULT_ECCENTRICITY))
+                                      if is_kepler_config(result) else DEFAULT_ECCENTRICITY)
     result["adaptive_enabled"] = bool(result.get("adaptive_enabled", False))
     try:
         result["adaptive_eta"] = float(result.get("adaptive_eta", 0.03))
@@ -1392,8 +1794,8 @@ def validate_config(config):
     except (ValueError, TypeError, OverflowError):
         raise ValueError("The maximum cumulative exponent must be a positive integer, and initial dt / N^exponent must be representable as a finite positive number.") from None
     try:
-        factor = float(result.get("work_step_factor", 2.0))
-        power = float(result.get("work_max_power", 7))
+        factor = float(result.get("work_step_factor", WORK_DEFAULT_FACTOR))
+        power = float(result.get("work_max_power", WORK_DEFAULT_MAX_POWER))
         if (not np.isfinite(factor) or factor <= 1 or not np.isfinite(power)
                 or power < 1 or power != int(power)):
             raise ValueError
@@ -1404,12 +1806,12 @@ def validate_config(config):
     except (ValueError, TypeError, OverflowError):
         raise ValueError("Work-step factor N must be finite and greater than 1; K must be a positive integer with representable initial dt / N^K.") from None
     try:
-        threshold = float(result.get("work_threshold", 1.0))
+        threshold = float(result.get("work_threshold", WORK_DEFAULT_THRESHOLD))
         if not np.isfinite(threshold) or threshold <= 0:
             raise ValueError
         result["work_threshold"] = threshold
     except (ValueError, TypeError, OverflowError):
-        raise ValueError("Work trigger threshold must be a finite positive number (code L²/T²).") from None
+        raise ValueError("Trigger Threshold must be a finite positive dimensionless fraction of S_E=K(0)+|U(0)|.") from None
     interval = result["dt"] * result["sample_every"]
     if not np.isfinite(interval) or interval <= 0:
         raise ValueError("The sampling interval is too large or too small. Adjust it.")
@@ -1417,6 +1819,8 @@ def validate_config(config):
 
 
 def make_initial_state(config):
+    if is_kepler_config(config):
+        return binary_stars(config.get("binary_eccentricity", DEFAULT_ECCENTRICITY))
     if config["initial_mode"] == "orbit":
         orbit = STABLE_ORBITS[config["orbit_index"]]
         masses = np.asarray(orbit.get("masses", np.ones(orbit["N"])), dtype=float)
@@ -1451,6 +1855,9 @@ def run_simulation(config, progress=None, cancel=None):
         with thread_scope():
             return _run_simulation_impl(config, progress, cancel)
     return _run_simulation_impl(config, progress, cancel)
+
+
+
 
 
 def _run_simulation_impl(config, progress=None, cancel=None):
@@ -1492,12 +1899,20 @@ def _run_simulation_impl(config, progress=None, cancel=None):
     next_sample_time = min(sample_number * sample_every * base_dt, end_time)
     previous_proposal = None
     ratio_mode = adaptive and adaptive_algorithm == "acceleration_ratio"
-    work_mode = adaptive and adaptive_algorithm == "work_step"
+    work_mode = adaptive and adaptive_algorithm in WORK_ALGORITHM_CODES
+    average_work_mode = work_mode and adaptive_algorithm == "work_step_average"
+    predicted_work_mode = work_mode and adaptive_algorithm == "work_step_predicted"
+    aligned_work_mode = work_mode and adaptive_algorithm in WORK_ALIGNED_CODES
     step_sampled = ratio_mode or work_mode
     work_controller = WorkStepController(base_dt, config["work_step_factor"], config["work_max_power"],
-                                         config["work_threshold"]) if work_mode else None
+                                         config["work_threshold"], masses=[s["mass"] for s in stars],
+                                         energy_scale=energy_scale, aligned=aligned_work_mode, average=average_work_mode, predicted=predicted_work_mode) if work_mode else None
     work_rejections, work_events, work_exceeded_intervals = [], [], []
     work_exceeded_steps = work_shrink_count = work_grow_count = work_max_level_used = 0
+    work_grow_trial_count = work_recovery_blocked_count = 0
+    work_preprobe = work_mode and config["work_preprobe_enabled"]
+    work_probe_events, work_probe_lock = [], None
+    work_probe_evaluations = work_probe_over_threshold_steps = work_probe_blocked_growth = 0
     ratio_shrink_count = ratio_grow_count = 0
     ratio_level = ratio_max_level_used = 0
     ratio_floor_dt = base_dt / config["acceleration_trigger_ratio"] ** config["acceleration_max_power"]
@@ -1522,6 +1937,25 @@ def _run_simulation_impl(config, progress=None, cancel=None):
             raise RuntimeError("The simulation produced non-finite values. Reduce dt or check close encounters.")
         return acceleration, energy
 
+    def physical_checkpoint():
+        if state is None:
+            return copy.deepcopy(stars)
+        saved = dict(state.__dict__)
+        for key in ("pos", "vel", "acceleration"):
+            saved[key] = saved[key].copy()
+        return saved
+
+    def restore_physical_checkpoint(saved):
+        if state is None:
+            stars[:] = copy.deepcopy(saved)
+        else:
+            state.__dict__.update(saved)
+            for key in ("pos", "vel", "acceleration"):
+                setattr(state, key, saved[key].copy())
+
+    def current_velocity():
+        return state.host_vel.copy() if state is not None else np.array([s["v"].copy() for s in stars])
+
     device_name = state.device_name if state is not None else cpu_model_name()
     initialization_seconds = time.perf_counter() - setup_started
     started = last_report = time.perf_counter()
@@ -1540,8 +1974,8 @@ def _run_simulation_impl(config, progress=None, cancel=None):
                     ratio_shrink_count += proposal < previous_proposal
                     ratio_grow_count += proposal > previous_proposal
             elif work_mode:
-                current_power = work_controller.power(accelerations[-1], velocities[-1])
-                proposal, work_previous_level = work_controller.propose_recovery(current_power)
+                work_previous_level = work_controller.level
+                proposal = work_controller.step()
             else:
                 proposal = (state.propose_step(base_dt, eta, previous_proposal) if state is not None
                             else adaptive_step_size(stars, base_dt, eta, previous_proposal))
@@ -1566,34 +2000,90 @@ def _run_simulation_impl(config, progress=None, cancel=None):
         if h <= 0 or new_time <= current_time:
             raise RuntimeError("The time step is smaller than the floating-point resolution at the current time. Adjust the parameters.")
         if work_mode:
-            checkpoint = dict(state.__dict__) if state is not None else copy.deepcopy(stars)
-            if state is not None:
-                for key in ("pos", "vel", "acceleration"):
-                    checkpoint[key] = checkpoint[key].copy()
+            # Every retry uses the same accepted start state and its own trial end.
+            initial_velocity = velocities[-1].copy()
+            checkpoint = physical_checkpoint()
+            # A coarse trial can fail while the adjacent fine trial requests
+            # growth. Remember failed bands for this starting state only.
+            over_limit_levels = set()
             while True:
                 if cancel is not None and cancel.is_set():
                     raise SimulationCancelled()
                 new_acceleration, energy = advance_state(h)
-                trial_velocity = state.host_vel if state is not None else np.asarray([s["v"] for s in stars])
-                trial_powers = acceleration_velocity_projection_product(new_acceleration, trial_velocity)
-                trial_power = work_controller.power(new_acceleration, trial_velocity)
-                work_indicator = trial_power * h
+                trial_indicators = work_controller.indicators(
+                    new_acceleration, initial_velocity, h, initial_acceleration=accelerations[-1],
+                    final_velocity=None, previous_acceleration=accelerations[-2] if len(accelerations)>1 else accelerations[-1])
+                work_indicator = float(np.max(trial_indicators))
                 work_max_level_used = max(work_max_level_used, work_controller.level)
-                if work_indicator <= work_controller.threshold or work_controller.level == work_controller.max_power:
+                retry_action = None
+                if work_indicator > work_controller.threshold:
+                    if work_controller.level < work_controller.max_power:
+                        over_limit_levels.add(work_controller.level)
+                        retry_action = "shrink"
+                elif (work_indicator < work_controller.threshold / work_controller.factor
+                      and work_controller.level > 0 and work_probe_lock is not None):
+                    work_probe_blocked_growth += 1
+                elif work_indicator < work_controller.threshold / work_controller.factor and work_controller.level > 0:
+                    enlarged = min(work_controller.max_dt / work_controller.factor ** (work_controller.level - 1),
+                                   end_time - current_time)
+                    if work_controller.level - 1 in over_limit_levels:
+                        work_recovery_blocked_count += 1
+                    elif enlarged > h:
+                        # Do not reject a final clipped trial if increasing the
+                        # nominal band cannot increase its actual duration.
+                        retry_action = "grow"
+                if retry_action is None:
+                    if (work_preprobe and work_probe_lock is None
+                            and work_controller.level < work_previous_level):
+                        entry_a = WorkEncounterWindow.magnitude(accelerations[-1])
+                        previous_a = (WorkEncounterWindow.magnitude(accelerations[-2])
+                                      if len(accelerations) > 1 else entry_a)
+                        candidate_a = WorkEncounterWindow.magnitude(new_acceleration)
+                        # Ordinary recovery on the declining side is unchanged.
+                        # Probe a recovery inside a rising-acceleration encounter.
+                        tolerance = 64*np.finfo(float).eps*max(entry_a, previous_a, np.finfo(float).tiny)
+                        if entry_a > previous_a+tolerance or candidate_a > entry_a+tolerance:
+                            work_rejections.append(dict(time=float(current_time), trial_dt=float(h),
+                                level=work_controller.level, action="probe_replay",
+                                reason="preprobe_close_encounter", indicator=work_indicator,
+                                controlling_stars=(np.flatnonzero(trial_indicators == work_indicator)+1).tolist()))
+                            restore_physical_checkpoint(checkpoint)
+                            try:
+                                event = probe_work_encounter(
+                                    current_time, end_time, h, accelerations[-1], advance_state,
+                                    current_velocity, work_controller, cancel,
+                                    (lambda probe_h: progress(current_time/end_time, steps, probe_h,
+                                                              time.perf_counter()-started)) if progress else None,
+                                    prior_acceleration=accelerations[-2] if len(accelerations)>1 else accelerations[-1])
+                            finally:
+                                restore_physical_checkpoint(checkpoint)
+                            event.update(replay_level=work_previous_level,
+                                         replay_max_dt=float(base_dt/work_controller.factor**work_previous_level),
+                                         replay_completed=False)
+                            work_probe_events.append(event)
+                            work_probe_evaluations += event["probe_trial_evaluations"]
+                            work_probe_over_threshold_steps += event["probe_over_threshold_steps"]
+                            work_probe_lock = dict(event=event,
+                                tracker=WorkEncounterWindow(current_time, accelerations[-1]))
+                            work_controller.level = work_previous_level
+                            h = min(work_controller.step(), end_time-current_time)
+                            new_time = current_time+h
+                            continue
                     break
                 work_rejections.append(dict(time=float(current_time), trial_dt=float(h),
                     level=work_controller.level,
+                    action=retry_action,
+                    reason="above_threshold" if retry_action == "shrink" else "below_threshold_over_N",
                     indicator=float(work_indicator) if np.isfinite(work_indicator) else None,
-                    controlling_stars=(np.flatnonzero(trial_powers == trial_power) + 1).tolist()))
+                    controlling_stars=(np.flatnonzero(trial_indicators == work_indicator) + 1).tolist()))
                 # Restore the exact pre-trial state, including diagnostic caches.
-                if state is None:
-                    stars[:] = copy.deepcopy(checkpoint)
+                restore_physical_checkpoint(checkpoint)
+                if retry_action == "shrink":
+                    work_controller.shrink()
+                    work_shrink_count += 1
                 else:
-                    state.__dict__.update(checkpoint)
-                    for key in ("pos", "vel", "acceleration"):
-                        setattr(state, key, checkpoint[key].copy())
-                work_controller.shrink()
-                work_shrink_count += 1
+                    work_controller.grow()
+                    work_grow_trial_count += 1
                 h = min(work_controller.step(), end_time - current_time)
                 new_time = current_time + h
                 if h <= 0 or new_time <= current_time:
@@ -1605,7 +2095,7 @@ def _run_simulation_impl(config, progress=None, cancel=None):
                                         level=work_controller.level, dt=float(h)))
             if work_indicator > work_controller.threshold:
                 work_exceeded_steps += 1
-                drivers = (np.flatnonzero(trial_powers * h > work_controller.threshold) + 1).tolist()
+                drivers = (np.flatnonzero(trial_indicators > work_controller.threshold) + 1).tolist()
                 peak = float(work_indicator) if np.isfinite(work_indicator) else None
                 # These are accepted over-limit step intervals, not a claim that
                 # every continuous instant between their endpoints exceeds the threshold.
@@ -1637,6 +2127,16 @@ def _run_simulation_impl(config, progress=None, cancel=None):
         energies.append(energy)
         times.append(current_time)
         step_sizes.append(h)
+        if work_probe_lock is not None:
+            tracker, event = work_probe_lock["tracker"], work_probe_lock["event"]
+            exited = tracker.observe(current_time, new_acceleration)
+            reached_probe_end = current_time >= event["probe_end_time"]
+            if (exited and reached_probe_end) or current_time == end_time:
+                event.update(replay_end_time=float(current_time),
+                             replay_peak_time=tracker.peak_time, replay_peak_acceleration=tracker.peak,
+                             replay_completed=bool(exited and reached_probe_end),
+                             replay_steps=steps-int(np.searchsorted(times, event["start_time"])))
+                work_probe_lock = None
         should_sample = ((steps % sample_every == 0 or current_time == end_time)
                          if step_sampled else current_time == next_sample_time)
         if should_sample:
@@ -1654,7 +2154,8 @@ def _run_simulation_impl(config, progress=None, cancel=None):
     trajectories = np.asarray(trajectories)
     orbit = STABLE_ORBITS[config["orbit_index"]] if config["initial_mode"] == "orbit" else None
     metadata = {
-        "case_name": orbit["name"] if orbit else f"Random initial conditions · seed = {config['seed']}",
+        "case_name": (f"High-eccentricity Kepler binary (e={config['binary_eccentricity']:.8g})" if is_kepler_config(config)
+                      else orbit["name"] if orbit else f"Random initial conditions · seed = {config['seed']}"),
         "case_id": f"orbit_{config['orbit_index'] + 1}" if orbit else f"seed_{config['seed']}",
         "seed": orbit["seed"] if orbit else config["seed"],
         "orbit_source": orbit.get("source") if orbit else None,
@@ -1693,19 +2194,44 @@ def _run_simulation_impl(config, progress=None, cancel=None):
         "work_step_factor": config["work_step_factor"] if work_mode else None,
         "work_max_power": config["work_max_power"] if work_mode else None,
         "work_threshold": config["work_threshold"] if work_mode else None,
-        "work_indicator_units": "code length^2/time^2 (specific energy)" if work_mode else None,
+        "work_indicator_units": "dimensionless",
+        "work_indicator_normalization": "initial_energy_scale",
+        "work_indicator_definition": WORK_PREDICTED_DEFINITION if predicted_work_mode else WORK_AVERAGE_DEFINITION if average_work_mode else
+                                     WORK_DISPLACEMENT_DEFINITION if aligned_work_mode or not work_mode else WORK_LEGACY_DISPLACEMENT_DEFINITION,
+        "work_algorithm_name": ADAPTIVE_ALGORITHMS[adaptive_algorithm] if work_mode else None,
+        "work_aligned": aligned_work_mode if work_mode else None,
+        "work_average": average_work_mode if work_mode else None,
+        "work_predicted": predicted_work_mode if work_mode else None,
+        "work_acceleration_selection": ("accepted_history_half_difference" if predicted_work_mode else "endpoint_vector_average" if average_work_mode else "start" if aligned_work_mode else "end") if work_mode else None,
+        "work_endpoint_symmetry": None,
+        "work_displacement_convention": displacement_work_convention(legacy=work_mode and not aligned_work_mode, average=average_work_mode, predicted=predicted_work_mode),
+        "work_normalization_definition": "S_E=K(0)+abs(U(0)); fixed at initial state",
+        "work_energy_scale": float(energy_scale),
         "work_final_level": work_controller.level if work_mode else None,
         "work_max_level_used": work_max_level_used if work_mode else None,
         "work_shrink_count": work_shrink_count,
         "work_grow_count": work_grow_count,
+        "work_grow_trial_count": work_grow_trial_count,
+        "work_recovery_blocked_count": work_recovery_blocked_count,
+        "work_preprobe_enabled": bool(work_preprobe),
+        "work_probe_policy": ("probe recovery during rising max_i|a_i| at the proposed larger dt, ignoring Q; "
+                              "stop after a sampled peak returns to entry max acceleration; restore all state; "
+                              "replay from recovery start at the pre-recovery dt or smaller, without growth; "
+                              "extend replay until its own peak returns to entry acceleration; end-time clips incomplete windows")
+                             if work_preprobe else None,
+        "work_probe_events": work_probe_events,
+        "work_probe_trial_evaluations": work_probe_evaluations,
+        "work_probe_over_threshold_steps": work_probe_over_threshold_steps,
+        "work_probe_blocked_growth": work_probe_blocked_growth,
+        "work_probe_window_count": len(work_probe_events),
+        "work_trial_evaluations": steps+len(work_rejections)+work_probe_evaluations if work_mode else None,
+        "work_recovery_policy": ("preprobe_peak_replay_v1" if work_preprobe else "trial_end_rollback_retry_v1") if work_mode else None,
+        "work_retry_conflict_policy": "when a larger band already exceeded the threshold at this same starting state, accept the smaller admissible trial; no repeated band loop" if work_mode else None,
         "work_step_events": work_events,
         "work_rejection_events": work_rejections,
         "work_exceeded_steps": work_exceeded_steps,
         "work_exceeded_intervals": work_exceeded_intervals,
-        "work_step_policy": ("trial-end max_i |a_i dot v_i| * actual dt <= work_threshold; otherwise restore and divide dt by N; "
-                             "at cumulative K accept over-limit minimum-band steps and report; "
-                             "recover one band if accepted-state max_i |a_i dot v_i| * enlarged nominal dt < work_threshold; "
-                             "clip only final step; no mass factor or energy normalization") if work_mode else None,
+        "work_step_policy": work_algorithm_note(adaptive_algorithm) if work_mode else None,
         "ratio_shrink_count": int(ratio_shrink_count),
         "ratio_grow_count": int(ratio_grow_count),
         "ratio_step_reference": "current known acceleration versus persistent per-star reference; reference changes only with local level; no trials"
@@ -1717,7 +2243,7 @@ def _run_simulation_impl(config, progress=None, cancel=None):
         "timestep_criterion": (
             "persistent-reference acceleration power bands; cumulative exponent limit; global minimum"
             if adaptive and adaptive_algorithm == "acceleration_ratio"
-            else "trial-end max_i |a_i dot v_i| dt with rejection, N-band recovery and reported K-cap exceedance" if work_mode
+            else f"normalized displacement work scale; {'accepted-history predicted acceleration/start velocity' if predicted_work_mode else 'mean endpoint acceleration/start velocity' if average_work_mode else 'start acceleration/start velocity' if aligned_work_mode else 'end acceleration/start velocity'}; rollback/retry both directions; K-cap exceedance marked" if work_mode
             else "pairwise gravity/flyby timescales" if adaptive else "fixed"),
         "energy_scale": float(energy_scale),
         "initial_view_extent": max(2 * float(np.max(np.abs(trajectories))), 1e-6) if orbit else 100,
@@ -1736,6 +2262,9 @@ def _run_simulation_impl(config, progress=None, cancel=None):
     # Post-processing is deliberately outside the integration compute timer.
     metadata["energy_error"] = time_weighted_energy_error(times, energies, energy_scale)
     metadata["energy_drift"] = fit_energy_drift(times, energies, energy_scale)
+    if is_kepler_config(config):
+        metadata["position_error"] = binary_position_error(np.asarray(times), np.asarray(trajectories),
+            np.asarray(velocities), config["binary_eccentricity"])
     return dict(trajectories=trajectories, accelerations=np.asarray(accelerations),
                 velocities=np.asarray(velocities), energies=np.asarray(energies), time_step=base_dt,
                 diagnostic_times=np.asarray(diagnostic_times), diagnostics=diagnostics,
@@ -1743,12 +2272,31 @@ def _run_simulation_impl(config, progress=None, cancel=None):
 
 
 
-def fit_energy_drift(times, energies, energy_scale, sample_count=1000, seed=0):
-    """OLS of E(t)-E(0) at reproducible random physical times.
+def physical_time_record_weights(times):
+    """Normalized trapezoidal node weights: half each adjacent physical interval."""
+    times = np.asarray(times, dtype=np.float64)
+    if (times.ndim != 1 or len(times) < 2 or not np.isfinite(times).all()
+            or np.any(np.diff(times) <= 0)):
+        raise ValueError("Time weighting requires at least two finite, strictly increasing time records.")
+    span = float(times[-1] - times[0])
+    if not np.isfinite(span) or span <= 0:
+        raise ValueError("The physical-time fit interval must be finite and positive.")
+    half_intervals = .5 * (np.diff(times) / span)
+    weights = np.zeros(len(times), dtype=np.float64)
+    weights[:-1] += half_intervals
+    weights[1:] += half_intervals
+    weights /= weights.sum()
+    return weights
 
-    Uniform time sampling avoids overweighting dense adaptive-step records.
-    Interpolation describes the saved trajectory, not unrecorded dynamics.
-    This descriptive slope is not a conservation test or an uncertainty bound.
+
+def fit_energy_drift(times, energies, energy_scale):
+    """Fit all recorded energy offsets with physical-time weighted least squares.
+
+    Each point represents half the interval on either side (endpoints: one side).
+    These trapezoidal weights approximate a uniformly time-weighted squared
+    residual; adding dense adaptive records does not give that interval extra
+    weight merely because its record count increased. The intercept is free.
+    The descriptive slope is not a conservation test or an uncertainty bound.
     """
     times = np.asarray(times, dtype=np.float64)
     energies = np.asarray(energies, dtype=np.float64)
@@ -1756,47 +2304,45 @@ def fit_energy_drift(times, energies, energy_scale, sample_count=1000, seed=0):
             or not np.isfinite(times).all() or not np.isfinite(energies).all()
             or np.any(np.diff(times) <= 0)):
         raise ValueError("Drift analysis requires at least two finite, strictly increasing time records.")
-    if isinstance(sample_count, (bool, np.bool_)) or int(sample_count) != sample_count or not 3 <= sample_count <= 100000:
-        raise ValueError("Random sample count must be an integer from 3 to 100000.")
-    if isinstance(seed, (bool, np.bool_)) or int(seed) != seed or not 0 <= seed <= 4294967295:
-        raise ValueError("Sampling seed must be an integer from 0 to 4294967295.")
-    count, seed = int(sample_count), int(seed)
+    weights = physical_time_record_weights(times)
     span = float(times[-1] - times[0])
-    rng = np.random.default_rng(seed)
-    sample_times = np.sort(rng.uniform(float(times[0]), float(times[-1]), count))
     # Subtract first to avoid losing small offsets when fitting a large baseline.
-    sample_offsets = np.interp(sample_times, times, energies - energies[0])
-    scaled_times = (sample_times - times[0]) / span
-    centered_times = scaled_times - np.mean(scaled_times)
-    centered_offsets = sample_offsets - np.mean(sample_offsets)
-    denominator = float(np.dot(centered_times, centered_times))
+    offsets = energies - energies[0]
+    scaled_times = (times - times[0]) / span
+    mean_time = float(np.dot(weights, scaled_times))
+    mean_offset = float(np.dot(weights, offsets))
+    centered_times = scaled_times - mean_time
+    centered_offsets = offsets - mean_offset
+    denominator = float(np.dot(weights, centered_times**2))
     if denominator <= 0:
-        raise ValueError("Sampled times have insufficient distinct values for a fit.")
-    delta = float(np.dot(centered_times, centered_offsets) / denominator)
+        raise ValueError("Recorded times have insufficient weighted spread for a fit.")
+    delta = float(np.dot(weights * centered_times, centered_offsets) / denominator)
     slope = delta / span
-    intercept = float(np.mean(sample_offsets) - delta * np.mean(scaled_times))
+    intercept = float(mean_offset - delta * mean_time)
     fitted = intercept + delta * scaled_times
-    residual_rmse = float(np.sqrt(np.mean((sample_offsets - fitted)**2)))
-    sst = float(np.dot(centered_offsets, centered_offsets))
-    r_squared = float(1 - np.sum((sample_offsets - fitted)**2) / sst) if sst > 0 else None
+    residual_mse = float(np.dot(weights, (offsets - fitted)**2))
+    residual_rmse = float(np.sqrt(residual_mse))
+    sst = float(np.dot(weights, centered_offsets**2))
+    r_squared = float(1 - residual_mse / sst) if sst > 0 else None
     scale = float(energy_scale)
     normalized_slope = slope / scale if np.isfinite(scale) and scale > 0 else None
     normalized_delta = delta / scale if np.isfinite(scale) and scale > 0 else None
-    return dict(version=1, method="ordinary least squares; free intercept",
-                sampling="uniform random physical times; linear interpolation of full saved energies",
-                sample_count=count, seed=seed, rng="numpy.default_rng PCG64",
+    return dict(version=2, method="physical-time weighted least squares; free intercept",
+                sampling="all saved records; no random sampling",
+                weighting="normalized trapezoidal node weights: half each adjacent physical-time interval; endpoints one side",
+                objective="sum_i w_i * (E_i-E_0-intercept-slope*(t_i-t_0))^2",
+                fit_records=int(len(times)), weight_sum=float(weights.sum()),
                 source_records=int(len(times)), time_start=float(times[0]), time_end=float(times[-1]),
                 initial_energy=float(energies[0]), energy_scale=scale if np.isfinite(scale) else None,
                 slope=slope, intercept_offset_at_start=intercept,
                 fitted_energy_change=delta, normalized_slope=normalized_slope,
                 normalized_fitted_energy_change=normalized_delta,
                 residual_rmse=residual_rmse, r_squared=r_squared,
-                slope_units="code energy / code time", normalized_slope_units="1 / code time",
-                sample_times=sample_times.tolist(), sample_energy_offsets=sample_offsets.tolist())
+                slope_units="code energy / code time", normalized_slope_units="1 / code time")
 
 
 def energy_drift_summary(result):
-    """Keep the archive summary compact; samples remain in result metadata/JSON."""
+    """Keep summaries compact, including when reading legacy sampled fits."""
     return {key: value for key, value in result.items()
             if key not in ("sample_times", "sample_energy_offsets")}
 
@@ -1992,6 +2538,27 @@ class NBodyViewer:
         self.diagnostic_times = np.asarray(diagnostic_times)
         self.diagnostics = diagnostics
         self.metadata = metadata
+        # Missing normalization identifies legacy runs with a dimensional threshold.
+        self.work_normalized = metadata.get("work_indicator_normalization") == "initial_energy_scale"
+        definition = metadata.get("work_indicator_definition")
+        self.work_algorithm_code = work_algorithm_from_definition(definition, metadata.get("adaptive_algorithm"))
+        self.work_algorithm_name = WORK_HISTORY_NAMES.get(self.work_algorithm_code, "Work scale")
+        self.work_legacy_timing = definition in (WORK_LEGACY_DISPLACEMENT_DEFINITION, WORK_LEGACY_SYMMETRIC_DEFINITION, WIDE_DEFINITION)
+        self.work_predicted = definition == WORK_PREDICTED_DEFINITION
+        self.work_average = definition == WORK_AVERAGE_DEFINITION
+        self.work_symmetric = definition in (WORK_SYMMETRIC_DEFINITION, WORK_LEGACY_SYMMETRIC_DEFINITION, WIDE_DEFINITION)
+        self.work_displacement = definition in (WORK_PREDICTED_DEFINITION, WORK_AVERAGE_DEFINITION, WORK_DISPLACEMENT_DEFINITION, WORK_SYMMETRIC_DEFINITION,
+                                               WORK_LEGACY_DISPLACEMENT_DEFINITION, WORK_LEGACY_SYMMETRIC_DEFINITION, WIDE_DEFINITION)
+        self.work_timing_note = "a_pred=a_start+0.5*(a_start-a_previous); accepted history; first step a_start" if self.work_predicted else "a_bar=(a_start+a_end)/2; start velocity" if self.work_average else (("Qf uses end a/start v; Qr uses start a/end v" if self.work_symmetric else
+                                  "VA0 = |start velocity along end acceleration|") if self.work_legacy_timing else
+                                 "Qf uses start a/start v; Qr uses end a/end v" if self.work_symmetric else
+                                 "A0 = start |a|; VA0 = |start velocity along start acceleration|")
+        self.work_indicator_formula = "m (|a_pred dot v_start| dt + 0.5 |a_pred|² dt²) / S_E" if self.work_predicted else "m (|a_bar dot v_start| dt + 0.5 |a_bar|² dt²) / S_E" if self.work_average else ("max(Q forward, Q reverse)" if self.work_symmetric else
+                                       ("m A (VA0 dt + 0.5 A dt²) / S_E" if self.work_legacy_timing else
+                                        "m A0 (VA0 dt + 0.5 A0 dt²) / S_E") if self.work_displacement else
+                                       "m |a dot v| dt / S_E" if self.work_normalized else "|a dot v| dt")
+        self.work_indicator_units = "dimensionless" if self.work_normalized else "code L²/T²"
+        self.work_masses = np.asarray([star["mass"] for star in metadata["initial_stars"]])
         self.adaptive = metadata.get("adaptive_enabled", False)
         if self.adaptive and record_times is None:
             raise ValueError("Adaptive mode requires actual cumulative times, not step count multiplied by a fixed dt.")
@@ -2007,13 +2574,18 @@ class NBodyViewer:
                                      f" · rejected trials = {metadata.get('discarded_trial_steps', 0)}")
             if metadata.get("energy_minimum_dt") is not None:
                 self.mode_description += f" · global dt min = {metadata['energy_minimum_dt']:.6g}"
-        elif metadata.get("adaptive_algorithm") == "work_step":
-            self.mode_description = (f"|a dot v| dt ≤ {metadata.get('work_threshold', 1.0):g} · N = {metadata['work_step_factor']:g}"
+        elif metadata.get("adaptive_algorithm") in WORK_HISTORY_CODES:
+            self.mode_description = (f"max {self.work_indicator_formula} ≤ {metadata.get('work_threshold', 1.0):g} · N = {metadata['work_step_factor']:g}"
                                      f" · K = {metadata['work_max_power']} · dt max = {self.dt:g}"
                                      f" · rejected trials = {metadata.get('discarded_trial_steps', 0)}")
         else:
             self.mode_description = f"Time-scale method · dt max = {self.dt:g} · eta = {metadata['adaptive_eta']:g}"
         self.mode_description += f" · {backend_summary(metadata)} · float64"
+        if self.adaptive and metadata.get("adaptive_algorithm") in WORK_HISTORY_CODES:
+            self.mode_description = self.work_algorithm_name + " · " + self.mode_description
+        if metadata.get("adaptive_algorithm") == WIDE_ALGORITHM:
+            self.mode_description += (f" · protection before/after = {metadata['work_protection_before']:g} / "
+                                      f"{metadata['work_protection_after']:g} code time · next-step recovery")
         if (self.times.shape != (self.frame_count,) or not np.isfinite(self.times).all()
                 or self.times[0] != 0 or np.any(np.diff(self.times) <= 0)):
             raise ValueError("Cumulative times must start at zero, increase strictly, and match the trajectory records.")
@@ -2027,6 +2599,12 @@ class NBodyViewer:
         self.timestep_summary = (f"Mean actual dt = {self.metadata['dt_mean_used']:.6g} | "
                                  f"mean / initial dt = {self.metadata['dt_mean_over_initial']:.6g}x "
                                  "(all completed steps)")
+        if self.metadata.get("work_preprobe_enabled"):
+            self.timestep_summary += (f" | Pre-probe ON: {self.metadata.get('work_probe_window_count', 0)} windows, "
+                                      f"{self.metadata.get('work_probe_trial_evaluations', 0):,} extra probe trials")
+        if self.work_algorithm_code == WIDE_ALGORITHM:
+            self.timestep_summary += (f"\nProtection before/after = {metadata['work_protection_before']:g} / "
+                                      f"{metadata['work_protection_after']:g} code time; next-step recovery")
         if self.accelerations.shape != (self.frame_count, self.n, 3):
             raise ValueError("Acceleration records must match every star and trajectory time.")
         if self.velocities.shape != (self.frame_count, self.n, 3):
@@ -2061,6 +2639,8 @@ class NBodyViewer:
         self.follow_view_active = False
         self.fixed_view_limits = None
         self.playing = False
+        self.playback_time = 0.0
+        self.playback_last_clock = None
         self.dragging = False
         self.updating_slider = False
         self.after_id = None
@@ -2131,10 +2711,11 @@ class NBodyViewer:
         ttk.Button(stepping, text="Next step", command=lambda: self.single_step(1)).pack(
             side="left", fill="x", expand=True)
         ttk.Button(sidebar, text="Return to start", command=self.rewind).pack(fill="x", pady=3)
-        self.stride_var = tk.StringVar(value=str(max(1, self.last_step // 1500)))
-        ttk.Label(sidebar, text="Recorded steps per playback frame").pack(anchor="w", pady=(7, 2))
-        ttk.Spinbox(sidebar, from_=1, to=max(1, self.last_step),
-                    textvariable=self.stride_var).pack(fill="x")
+        self.playback_speed_var = tk.StringVar(value="1")
+        ttk.Label(sidebar, text="Playback speed (×)").pack(anchor="w", pady=(7, 2))
+        ttk.Spinbox(sidebar, from_=.05, to=100, increment=.05,
+                    textvariable=self.playback_speed_var).pack(fill="x")
+        ttk.Label(sidebar, text="1×: full duration in 60 seconds", style="Note.TLabel").pack(anchor="w")
         self.loop_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(sidebar, text="Loop playback", variable=self.loop_var).pack(anchor="w", pady=4)
 
@@ -2209,7 +2790,6 @@ class NBodyViewer:
         self.build_diagnostics()
         self.build_energy_drift()
         self.build_acceleration_derivative()
-        self.build_work_limit_report()
         self.mark_work_limit_intervals()
         self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_change)
 
@@ -2231,38 +2811,10 @@ class NBodyViewer:
         self.orbit_axes.draw(self.canvas.get_renderer())
         self.canvas.draw()
         self.diagnostic_canvas.draw()
-        if self.metadata.get("work_exceeded_steps", 0):
-            self.notebook.select(self.work_report_tab)
         self.after_id = self.root.after(40, self.tick)
 
 
-    def build_work_limit_report(self):
-        if self.metadata.get("adaptive_algorithm") != "work_step":
-            return
-        self.work_report_tab = ttk.Frame(self.notebook)
-        self.notebook.add(self.work_report_tab, text="Adaptive limit report")
-        bar = ttk.Frame(self.work_report_tab, padding=8)
-        bar.pack(fill="x")
-        ttk.Label(bar, text=f"浅红色区间：已到 K 档且试算结束指标仍大于阈值 {self.metadata.get('work_threshold', 1.0):g}，按设定继续计算。",
-                  wraplength=850).pack(side="left", fill="x", expand=True)
-        ttk.Button(bar, text="Save report (JSON)", command=self.save_work_limit_report).pack(side="right")
-        frame = ttk.Frame(self.work_report_tab)
-        frame.pack(fill="both", expand=True)
-        text = self.work_report_text = tk.Text(frame, wrap="word", padx=12, pady=10)
-        scroll = ttk.Scrollbar(frame, orient="vertical", command=text.yview)
-        text.configure(yscrollcommand=scroll.set)
-        scroll.pack(side="right", fill="y")
-        text.pack(side="left", fill="both", expand=True)
-        text.insert("1.0", work_limit_report(self.metadata))
-        text.configure(state="disabled")
 
-    def save_work_limit_report(self):
-        path = self.choose_save_path(".json", "Adaptive limit report", "_adaptive_limits")
-        if path:
-            Path(path).write_text(json.dumps(dict(report=work_limit_report(self.metadata),
-                threshold=self.metadata.get("work_threshold", 1.0),
-                intervals=self.metadata.get("work_exceeded_intervals", [])),
-                ensure_ascii=False, allow_nan=False, indent=2), encoding="utf-8")
 
     def mark_work_limit_intervals(self):
         intervals = self.metadata.get("work_exceeded_intervals", [])
@@ -2272,11 +2824,15 @@ class NBodyViewer:
         for axis in self.hover_items:
             spans = [axis.axvspan(item["start_time"], item["end_time"], facecolor="#ef4444",
                                  edgecolor="#b91c1c", linewidth=.5, alpha=.18, zorder=.4,
-                                 label="K cap: over limit" if index == 0 else "_nolegend_")
-                     for index, item in enumerate(intervals)]
+                                 label="_nolegend_")
+                     for item in intervals]
             self.work_limit_spans[axis] = spans
-            if axis in self.step_axes:
-                self.update_overview_legend(axis)
+        # One bottom legend per figure explains the marked time intervals.
+        for figure in {axis.figure for axis in self.work_limit_spans}:
+            handle = next(spans[0] for axis, spans in self.work_limit_spans.items()
+                          if axis.figure is figure)
+            figure.legend([handle], ["Red shading: threshold exceeded at minimum step (K limit)"],
+                          loc="outside lower center", frameon=False, fontsize=8)
 
     def embed_figure(self, figure, parent):
         # The plot uses the available viewport exactly; no oversized scrollable canvas.
@@ -2352,6 +2908,9 @@ class NBodyViewer:
         scale = (1.0 if for_export else
                  max(.82, min(1.0, width / base_width, height / base_height)))
         text_items = list(figure.texts)
+        for legend in figure.legends:
+            text_items.extend(legend.get_texts())
+            text_items.append(legend.get_title())
         for axis in figure.axes:
             text_items.extend(axis.texts)
             text_items.append(axis.title)
@@ -2389,8 +2948,8 @@ class NBodyViewer:
             compact_mode = (f"energy bound={100*self.metadata.get('energy_relative_tolerance', 0.1):.6g}%; "
                             f"max rejects/step={self.metadata.get('energy_max_rejections', 'NA')}; "
                             f"rejected={self.metadata.get('discarded_trial_steps', 0)}; dt_max={self.dt:g}")
-        elif self.metadata["adaptive_algorithm"] == "work_step":
-            compact_mode = (f"|a dot v| dt ≤ {self.metadata.get('work_threshold', 1.0):g}; N={self.metadata['work_step_factor']:g}, "
+        elif self.metadata["adaptive_algorithm"] in WORK_HISTORY_CODES:
+            compact_mode = (f"max {self.work_indicator_formula} ≤ {self.metadata.get('work_threshold', 1.0):g}; N={self.metadata['work_step_factor']:g}, "
                             f"K={self.metadata['work_max_power']}; dt_max={self.dt:g}")
         else:
             compact_mode = f"eta={self.metadata['adaptive_eta']:g}; dt_max={self.dt:g}"
@@ -2398,6 +2957,8 @@ class NBodyViewer:
                                f"{self.metadata['method_name']} | N={self.n} | {compact_mode} | "
                                f"{backend_summary(self.metadata)} | steps={self.last_step:,}")
         self.figure_caption += "\n" + self.timestep_summary
+        if self.adaptive and self.metadata.get("adaptive_algorithm") in WORK_HISTORY_CODES:
+            self.figure_caption = self.work_algorithm_name + " | " + self.figure_caption
         self.figure.suptitle(self.figure_caption, fontsize=9)
         grid = self.figure.add_gridspec(2, 2, width_ratios=(1.0, 1.45))
         self.orbit_axes = self.figure.add_subplot(grid[:, 0], projection="3d")
@@ -2513,7 +3074,7 @@ class NBodyViewer:
         self.time_axis_for = {}
         self.step_log_base = float(self.metadata.get("acceleration_trigger_ratio") or
                                    self.metadata.get("work_step_factor") or 10.0)
-        ratio_mode = self.adaptive and self.metadata.get("adaptive_algorithm") in ("acceleration_ratio", "work_step")
+        ratio_mode = self.adaptive and self.metadata.get("adaptive_algorithm") in ("acceleration_ratio", *WORK_HISTORY_CODES)
         for axis in (self.energy_axes, self.acceleration_axes):
             self.add_step_size_axis(axis, self.step_log_base, show_ratio_levels=ratio_mode)
 
@@ -2521,9 +3082,6 @@ class NBodyViewer:
         if handles is None:
             handles, _ = axis.get_legend_handles_labels()
         handles = list(handles)
-        spans = getattr(self, "work_limit_spans", {}).get(axis, [])
-        if spans and spans[0] not in handles:
-            handles.append(spans[0])
         handles += [self.step_lines[axis]]
         diagnostic = axis is getattr(self, "diagnostic_energy_axes", None)
         if axis.figure is getattr(self, "derivative_figure", None):
@@ -2540,7 +3098,8 @@ class NBodyViewer:
 
     def build_diagnostics(self):
         self.diagnostic_figure = Figure(figsize=(15, 10), dpi=100, constrained_layout=True)
-        grid = self.diagnostic_figure.add_gridspec(5, 4, height_ratios=(.6, 1.25, 1, 1, 1))
+        has_position_error = self.metadata.get("position_error", {}).get("reference_kind") == "analytic_kepler"
+        grid = self.diagnostic_figure.add_gridspec(5, 4, height_ratios=(.85 if has_position_error else .6, 1.25, 1, 1, 1))
         self.diagnostic_figure.suptitle("Conservation and error analysis\n" + self.figure_caption, fontsize=9)
         self.diagnostic_cursors = []
         self.diagnostic_info_axes = self.diagnostic_figure.add_subplot(grid[0, :])
@@ -2549,6 +3108,14 @@ class NBodyViewer:
         self.plot_headers[energy_axis] = self.diagnostic_info_axes
         self.diagnostic_title_text = self.diagnostic_info_axes.text(0, .98, "Energy", va="top", fontsize=10)
         self.diagnostic_error_text = self.diagnostic_info_axes.text(0, .62, "", va="top", fontsize=8)
+        self.diagnostic_drift_text = self.diagnostic_info_axes.text(0, .28, "", va="top", fontsize=8)
+        if has_position_error:
+            self.diagnostic_error_text.set_y(.72)
+            self.diagnostic_drift_text.set_y(.46)
+            error = self.metadata["position_error"]
+            self.diagnostic_position_text = self.diagnostic_info_axes.text(0, .17,
+                f"Kepler position RMSE = {error['rmse']:.5e}    NRMSE = {error['nrmse']:.5e} "
+                f"| e = {error['eccentricity']:g}", va="top", fontsize=8)
         self.diagnostic_statistics_text = self.diagnostic_info_axes.text(
             1, .98, "", ha="right", va="top", fontsize=8, linespacing=1.2)
 
@@ -2605,19 +3172,29 @@ class NBodyViewer:
     def build_acceleration_derivative(self):
         self.derivative_tab = ttk.Frame(self.notebook)
         self.notebook.add(self.derivative_tab, text="Work-step indicator")
-        self.derivative_readout_var = tk.StringVar(value="Select this page to calculate |a dot v| times the accepted step size.")
+        self.derivative_readout_var = tk.StringVar(value=f"Select this page to calculate Q = {self.work_indicator_formula} ({self.work_indicator_units}).")
         note = ttk.Label(self.derivative_tab, style="Note.TLabel", justify="left",
                          textvariable=self.derivative_readout_var, wraplength=900)
         note.pack(fill="x", padx=8, pady=(0, 2))
         self.derivative_tab.bind("<Configure>", lambda event: note.configure(
             wraplength=max(220, event.width - 20)))
         figure = self.derivative_figure = Figure(
-            figsize=(10.6, 7), dpi=100, facecolor="white", constrained_layout=True)
-        figure.suptitle("Energy and work-step indicator\n"
-                       "Q = |a dot v| dt; end-of-step a and v; incoming actual dt; units: code L^2/T^2", fontsize=9)
-        grid = figure.add_gridspec(4, 1, height_ratios=(.23, 1) * 2)
+            figsize=(10.6, 10.3), dpi=100, facecolor="white", constrained_layout=True)
+        figure.suptitle((f"{self.work_algorithm_name}: energy and endpoint-symmetric work monitor\n" if self.work_symmetric else
+                        f"{self.work_algorithm_name}: energy and work-step indicator\n")
+                       + f"Q = {self.work_indicator_formula}; "
+                       + (self.work_timing_note + "; " if self.work_displacement else "end-of-step a and v; ")
+                       + f"incoming actual dt; {self.work_indicator_units}"
+                       + ("\nS_E = K(0) + |U(0)|, fixed at initial state" if self.work_normalized else "")
+                       + (f"\nPre-probe ON: {self.metadata.get('work_probe_window_count', 0)} replay windows; "
+                          f"{self.metadata.get('work_probe_trial_evaluations', 0):,} extra probe trials"
+                          if self.metadata.get("work_preprobe_enabled") else ""), fontsize=9)
+        grid = figure.add_gridspec(10, 1, height_ratios=(.23, 1) * 5)
         axes, titles = [], []
-        for index, title in enumerate(("System energy", "Work-step indicator |a dot v| dt")):
+        for index, title in enumerate(("System energy", f"Work-step indicator {self.work_indicator_formula}",
+                                       "Separate contributions to Q",
+                                       "Acceleration magnitude and velocity along acceleration",
+                                       "Acceleration magnitude times speed along acceleration")):
             info = figure.add_subplot(grid[2*index]); info.set_axis_off()
             axis = figure.add_subplot(grid[2*index+1], sharex=axes[0] if axes else None)
             self.plot_headers[axis] = info
@@ -2626,14 +3203,36 @@ class NBodyViewer:
             axis.tick_params(labelsize=8)
             axis.yaxis.set_offset_position("right")
             axis.set_xlim(self.times[0], self.times[-1])
-            if index == 1:
+            if index == 4:
                 axis.set_xlabel("Time (code units)", fontsize=9)
             else:
                 axis.tick_params(labelbottom=False)
             axes.append(axis)
-        self.derivative_energy_axes, self.work_indicator_axes = axes
+        (self.derivative_energy_axes, self.work_indicator_axes, self.work_terms_axes, self.work_components_axes,
+         self.work_power_axes) = axes
         for axis in axes[1:]:
             axis.callbacks.connect("ylim_changed", self.update_derivative_ticks)
+        self.work_velocity_axes = self.work_components_axes.twinx()
+        self.time_axis_for[self.work_velocity_axes] = self.work_components_axes
+        self.work_acceleration_line, = self.work_components_axes.plot(
+            [], [], color="#0891b2", linewidth=1.2, label="|a| (left)")
+        self.work_velocity_line, = self.work_velocity_axes.plot(
+            [], [], color="#ea580c", linewidth=1.2, label="v along a (right; signed)")
+        self.work_velocity_axes.axhline(0, color="#8a94a3", linestyle=":", linewidth=.7)
+        self.work_components_axes.set_ylabel("|a| (code L/T²)", color="#0891b2", fontsize=8)
+        self.work_components_axes.tick_params(axis="y", colors="#0891b2")
+        self.work_velocity_axes.set_ylabel("v along a (code L/T)", color="#ea580c", fontsize=8)
+        self.work_velocity_axes.tick_params(axis="y", colors="#ea580c", labelsize=8)
+        self.work_velocity_axes.set_yscale("linear")
+        self.work_velocity_axes.yaxis.set_offset_position("right")
+        self.work_power_line, = self.work_power_axes.plot(
+            [], [], color="#16a34a", linewidth=1.25, label="A × |VA| = |a dot v|")
+        self.work_power_axes.set_ylabel("A × |VA|\n(code L²/T³)", fontsize=8)
+        self.work_velocity_term_line, = self.work_terms_axes.plot(
+            [], [], color="#2563eb", linewidth=1.25, label="Qv = m A VA0 dt / S_E")
+        self.work_acceleration_term_line, = self.work_terms_axes.plot(
+            [], [], color="#dc2626", linewidth=1.25, label="Qa = m A² dt² / (2 S_E)")
+        self.work_terms_axes.set_ylabel("Q contributions\n(dimensionless)", fontsize=8)
         self.derivative_titles = titles
         self.derivative_energy_line, = axes[0].plot([], [], color="#172435", linewidth=1.2, label="E")
         self.derivative_energy_reference = axes[0].axhline(
@@ -2642,17 +3241,27 @@ class NBodyViewer:
             [], [], color="#7c3aed", linewidth=1.3, label="Selected star Q")
         self.work_indicator_max_line, = axes[1].plot(
             [], [], color="#087f8c", linewidth=1.0, linestyle="--", alpha=.8, label="All-star maximum Q")
+        if self.work_symmetric:
+            self.work_forward_line, = axes[1].plot([], [], color="#2563eb", linewidth=.85, linestyle=":", label="Q forward")
+            self.work_reverse_line, = axes[1].plot([], [], color="#ea580c", linewidth=.85, linestyle="-.", label="Q reverse")
         self.work_plot_threshold = float(self.metadata.get("work_threshold") or
-                                        self.metadata.get("config", {}).get("work_threshold", 1.0))
-        active = self.adaptive and self.metadata.get("adaptive_algorithm") == "work_step"
-        threshold_label = "Trigger threshold" if active else "Reference threshold (inactive)"
+                                        self.metadata.get("config", {}).get("work_threshold",
+                                            WORK_DEFAULT_THRESHOLD if self.work_displacement else 1.0))
+        active = self.adaptive and self.metadata.get("adaptive_algorithm") in WORK_HISTORY_CODES
+        threshold_label = "Trigger Threshold" if active else "Reference threshold (inactive)"
         self.work_indicator_threshold_line = axes[1].axhline(
             self.work_plot_threshold, color="#b91c1c", linestyle=":", linewidth=1.1,
             label=f"{threshold_label} = {self.work_plot_threshold:g}")
         self.derivative_cursors = []
-        ratio_mode = self.adaptive and self.metadata.get("adaptive_algorithm") in ("acceleration_ratio", "work_step")
+        ratio_mode = self.adaptive and self.metadata.get("adaptive_algorithm") in ("acceleration_ratio", *WORK_HISTORY_CODES)
         for axis in axes:
-            self.add_step_size_axis(axis, self.step_log_base, show_ratio_levels=ratio_mode)
+            for number, window in enumerate(self.metadata.get("work_protection_windows") or []):
+                axis.axvspan(window["start"], window["end"], color="#0d9488", alpha=.09,
+                             label="Protection window" if number == 0 and axis is axes[0] else "_nolegend_", zorder=0)
+                axis.axvspan(window["core_start"], window["core_end"], color="#0d9488", alpha=.10,
+                             label="Locator core" if number == 0 and axis is axes[0] else "_nolegend_", zorder=0)
+            if axis is not self.work_components_axes:
+                self.add_step_size_axis(axis, self.step_log_base, show_ratio_levels=ratio_mode)
             self.derivative_cursors.append(axis.axvline(
                 self.times[self.step], color="#de8a28", linewidth=1, alpha=.7))
             self.register_hover(axis, self.times, {})
@@ -2675,7 +3284,7 @@ class NBodyViewer:
         self.derivative_energy_reference.set_label("ΔE = 0" if offset else "E(0)")
         self.derivative_titles[0].set_text("System energy offset ΔE" if offset else "System total energy E")
         self.apply_energy_scale(axis, values)
-        axis.set_ylabel(f"{label} (code energy)", fontsize=8)
+        axis.set_ylabel(f"{label} (code energy; {self.energy_scale_var.get()})", fontsize=8)
         axis.relim(); axis.autoscale_view(scalex=False)
         if old_limits is not None:
             axis.set_ylim(old_limits)
@@ -2690,20 +3299,46 @@ class NBodyViewer:
         if not hasattr(self, "global_work_step_indicator"):
             maximum = np.zeros(self.frame_count)
             for star in range(self.n):
-                values = work_step_indicator(self.accelerations[:, star, :], self.velocities[:, star, :], self.step_sizes)
+                values = self.star_work_indicator(star)
                 np.maximum(maximum, values, out=maximum)
             self.global_work_step_indicator = maximum
         if self.derivative_star_index != self.star_index:
-            self.selected_work_step_indicator = work_step_indicator(
-                self.accelerations[:, self.star_index, :], self.velocities[:, self.star_index, :], self.step_sizes)
+            self.selected_work_step_indicator = self.star_work_indicator(self.star_index)
+            if self.work_symmetric:
+                terms = symmetric_work_step_terms(self.accelerations[:, self.star_index, :],
+                    self.velocities[:, self.star_index, :], self.step_sizes,
+                    self.work_masses[self.star_index], self.metadata["energy_scale"], legacy=self.work_legacy_timing)
+                self.selected_work_forward, self.selected_work_reverse = terms["forward"], terms["reverse"]
+                self.selected_work_reverse_selected = terms["reverse_selected"]
+                self.selected_work_velocity_term, self.selected_work_acceleration_term = terms["velocity_term"], terms["acceleration_term"]
+            elif self.work_displacement:
+                self.selected_work_velocity_term, self.selected_work_acceleration_term = displacement_work_step_terms(
+                    self.accelerations[:, self.star_index, :], self.velocities[:, self.star_index, :],
+                    self.step_sizes, self.work_masses[self.star_index], self.metadata["energy_scale"], legacy=self.work_legacy_timing, average=self.work_average, predicted=self.work_predicted)
+            else:
+                # Historical Q had only its endpoint-velocity term; do not
+                # retrospectively add the new quadratic contribution to it.
+                self.selected_work_velocity_term = self.selected_work_step_indicator.copy()
+                self.selected_work_acceleration_term = np.zeros_like(self.selected_work_velocity_term)
+                self.selected_work_acceleration_term[0] = np.nan
+            self.selected_work_acceleration = np.hypot.reduce(self.accelerations[:, self.star_index, :], axis=-1)
+            _, self.selected_work_velocity_along_a = velocity_acceleration_projections(
+                self.accelerations[:, self.star_index, :], self.velocities[:, self.star_index, :])
+            # Same recorded-time vectors, without mass, dt or energy normalization.
+            # Direct dot product also defines the product as zero when |a|=0.
+            self.selected_work_power = acceleration_velocity_projection_product(
+                self.accelerations[:, self.star_index, :], self.velocities[:, self.star_index, :])
             self.derivative_star_index = self.star_index
         axis = self.work_indicator_axes
         self.work_indicator_line.set_label(f"Star {self.star_index + 1}: Q")
         self.set_time_series(self.work_indicator_line, self.times, self.selected_work_step_indicator, preserve_zero=True)
         self.set_time_series(self.work_indicator_max_line, self.times, self.global_work_step_indicator, preserve_zero=True)
+        if self.work_symmetric:
+            self.set_time_series(self.work_forward_line, self.times, self.selected_work_forward, preserve_zero=True)
+            self.set_time_series(self.work_reverse_line, self.times, self.selected_work_reverse, preserve_zero=True)
         scale = set_physical_log_scale(axis, np.r_[self.selected_work_step_indicator,
                                                    self.global_work_step_indicator, self.work_plot_threshold], positive_only=True)
-        axis.set_ylabel("|a dot v| dt\n(code L²/T²)", fontsize=8)
+        axis.set_ylabel(f"{'Q' if self.work_displacement else self.work_indicator_formula}\n({self.work_indicator_units})", fontsize=8)
         axis.set_autoscaley_on(True)
         axis.relim(); axis.autoscale_view(scalex=False)
         self.update_derivative_ticks(axis)
@@ -2711,10 +3346,90 @@ class NBodyViewer:
         self.update_overview_legend(axis, ncol=2)
         self.register_hover(axis, self.times, {f"Star {self.star_index + 1} Q": self.selected_work_step_indicator,
                                              "All-star maximum Q": self.global_work_step_indicator},
-                            f"Work-step indicator (code L²/T²); threshold = {self.work_plot_threshold:g}; initial state undefined")
+                            f"Work-step indicator ({self.work_indicator_units}); threshold = {self.work_plot_threshold:g}; initial state undefined")
+        if self.work_symmetric:
+            short_name = "Wide Test" if self.work_algorithm_code == WIDE_ALGORITHM else self.work_algorithm_name
+            self.derivative_titles[1].set_text(f"{short_name} Q: Star {self.star_index + 1} and all-star maximum [{scale}]")
+            self.register_hover(axis, self.times,
+                {"Q forward": self.selected_work_forward, "Q reverse": self.selected_work_reverse,
+                 "Selected max Q": self.selected_work_step_indicator, "All-star maximum Q": self.global_work_step_indicator,
+                 "Reverse direction selected (0/1)": self.selected_work_reverse_selected},
+                f"{self.work_algorithm_name}; maximum is taken per star and then over all stars")
+        terms_axis = self.work_terms_axes
+        self.set_time_series(self.work_velocity_term_line, self.times, self.selected_work_velocity_term, preserve_zero=True)
+        self.set_time_series(self.work_acceleration_term_line, self.times, self.selected_work_acceleration_term, preserve_zero=True)
+        terms_scale = set_physical_log_scale(terms_axis, np.r_[self.selected_work_velocity_term,
+                                                               self.selected_work_acceleration_term], positive_only=True)
+        terms_axis.set_autoscaley_on(True)
+        terms_axis.relim(); terms_axis.autoscale_view(scalex=False)
+        self.update_derivative_ticks(terms_axis)
+        terms_axis.set_ylabel(f"Q contributions\n({self.work_indicator_units})", fontsize=8)
+        self.work_velocity_term_line.set_label(("Qv = m A VA0 dt / S_E" if self.work_legacy_timing else "Qv = m A0 VA0 dt / S_E") if self.work_displacement else "Legacy Q (end velocity)")
+        self.work_acceleration_term_line.set_label(("Qa = m A² dt² / (2 S_E)" if self.work_legacy_timing else "Qa = m A0² dt² / (2 S_E)") if self.work_displacement else "Quadratic term (not used)")
+        self.derivative_titles[2].set_text(
+            f"Star {self.star_index + 1}: Qv + Qa = Q; {'mixed-time' if self.work_legacy_timing else 'start-state a0 and v0'} [{terms_scale}]"
+            if self.work_displacement else f"Star {self.star_index + 1}: legacy Q has no quadratic term [{terms_scale}]")
+        if self.work_average:
+            self.work_velocity_term_line.set_label("Qv = m |a_bar dot v_start| dt / S_E")
+            self.work_acceleration_term_line.set_label("Qa = m |a_bar|² dt² / (2 S_E)")
+            self.derivative_titles[2].set_text(
+                f"Star {self.star_index + 1}: Qv + Qa = Q; endpoint-mean a and start v [{terms_scale}]")
+        if self.work_predicted:
+            self.work_velocity_term_line.set_label("Qv = m |a_pred dot v_start| dt / S_E")
+            self.work_acceleration_term_line.set_label("Qa = m |a_pred|² dt² / (2 S_E)")
+            self.derivative_titles[2].set_text(
+                f"Star {self.star_index + 1}: Qv + Qa = Q; accepted-history predicted a and start v [{terms_scale}]")
+        if self.work_symmetric:
+            self.work_velocity_term_line.set_label("Qv (winning direction)")
+            self.work_acceleration_term_line.set_label("Qa (winning direction)")
+            self.derivative_titles[2].set_text(f"Star {self.star_index + 1}: Qv + Qa from winning direction = Q [{terms_scale}]")
+        self.update_overview_legend(terms_axis, ncol=3)
+        self.register_hover(terms_axis, self.times,
+                            {"Qv (velocity term)": self.selected_work_velocity_term,
+                             "Qa (acceleration term)": self.selected_work_acceleration_term,
+                             "Qv + Qa": self.selected_work_velocity_term+self.selected_work_acceleration_term},
+                            "Recorded accepted-step contributions to selected-star Q")
+        self.set_time_series(self.work_acceleration_line, self.times, self.selected_work_acceleration, preserve_zero=True)
+        self.set_time_series(self.work_velocity_line, self.times, self.selected_work_velocity_along_a, preserve_zero=True)
+        component_scale = set_physical_log_scale(self.work_components_axes, self.selected_work_acceleration,
+                                                positive_only=True)
+        for component_axis in (self.work_components_axes, self.work_velocity_axes):
+            component_axis.set_autoscaley_on(True)
+            component_axis.relim(); component_axis.autoscale_view(scalex=False)
+        self.update_derivative_ticks(self.work_components_axes)
+        self.work_acceleration_line.set_label(f"|a| (left; {component_scale})")
+        self.plot_headers[self.work_components_axes].legend(
+            handles=[self.work_acceleration_line, self.work_velocity_line],
+            fontsize=6.5, ncol=2, loc="upper right", bbox_to_anchor=(1, 1.05),
+            borderaxespad=0, frameon=False, handlelength=1.3, columnspacing=.8)
+        self.derivative_titles[3].set_text(f"Star {self.star_index + 1}: |a| and velocity along a (signed)")
+        self.register_hover(self.work_components_axes, self.times,
+                            {"|a| (code L/T²)": self.selected_work_acceleration,
+                             "v along a (code L/T; signed)": self.selected_work_velocity_along_a},
+                            f"Star {self.star_index + 1}: acceleration and velocity projection; |a|=0 gives undefined direction")
+        self.set_time_series(self.work_power_line, self.times, self.selected_work_power, preserve_zero=True)
+        power_scale = set_physical_log_scale(self.work_power_axes, self.selected_work_power,
+                                              positive_only=True)
+        self.work_power_axes.set_autoscaley_on(True)
+        self.work_power_axes.relim(); self.work_power_axes.autoscale_view(scalex=False)
+        self.update_derivative_ticks(self.work_power_axes)
+        self.derivative_titles[4].set_text(
+            f"Star {self.star_index + 1}: A × |VA| = |a dot v| (same-time vectors) [{power_scale}]")
+        self.update_overview_legend(self.work_power_axes, ncol=2)
+        self.register_hover(self.work_power_axes, self.times,
+                            {"A × |VA| (code L²/T³)": self.selected_work_power},
+                            f"Star {self.star_index + 1}: specific power magnitude; no mass, dt or normalization")
         self.update_derivative_readout()
         self.apply_figure_layout(self.derivative_figure, *self.derivative_figure.bbox.size)
         self.derivative_canvas.draw_idle()
+
+    def star_work_indicator(self, star):
+        arguments = (self.accelerations[:, star, :], self.velocities[:, star, :], self.step_sizes)
+        if self.work_normalized:
+            compute = symmetric_work_step_indicator if self.work_symmetric else displacement_work_step_indicator if self.work_displacement else normalized_work_step_indicator
+            return compute(*arguments, self.work_masses[star], self.metadata["energy_scale"],
+                           **({"legacy": self.work_legacy_timing, **({"average": True} if self.work_average else {}), **({"predicted": True} if self.work_predicted else {})} if self.work_displacement else {}))
+        return work_step_indicator(*arguments)
 
     @staticmethod
     def update_derivative_ticks(axis):
@@ -2750,31 +3465,31 @@ class NBodyViewer:
         self.derivative_readout_var.set(
             f"Star {self.star_index + 1} | t = {self.times[self.step]:.8g} | "
             f"Q = {self.selected_work_step_indicator[self.step]:.7e} | "
+            f"Qv = {self.selected_work_velocity_term[self.step]:.7e} | "
+            f"Qa = {self.selected_work_acceleration_term[self.step]:.7e} | "
             f"max Q = {self.global_work_step_indicator[self.step]:.7e} | "
+            f"|a| = {self.selected_work_acceleration[self.step]:.7e} | "
+            f"v along a = {self.selected_work_velocity_along_a[self.step]:+.7e} | "
+            f"A × |VA| = {self.selected_work_power[self.step]:.7e} | "
             f"dt = {self.step_sizes[self.step]:.7e} | threshold = {self.work_plot_threshold:g} "
-            "(Q: code L^2/T^2; initial state has no completed step)")
+            f"(Q: {self.work_indicator_units}; initial state has no completed step)")
 
     def build_energy_drift(self):
         self.drift_tab = ttk.Frame(self.notebook)
         self.notebook.add(self.drift_tab, text="Energy drift")
         self.drift_result = self.metadata.get("energy_drift")
-        if self.drift_result is None:
+        if self.drift_result is None or self.drift_result.get("version") != 2:
             self.drift_result = fit_energy_drift(self.times, self.energies, self.metadata["energy_scale"])
         self.metadata["energy_drift"] = self.drift_result
         bar = ttk.Frame(self.drift_tab, padding=(6, 4))
         bar.pack(fill="x")
-        self.drift_count_var = tk.StringVar(value=str(self.drift_result["sample_count"]))
-        self.drift_seed_var = tk.StringVar(value=str(self.drift_result["seed"]))
-        ttk.Label(bar, text="Random samples:").grid(row=0, column=0, sticky="w")
-        ttk.Entry(bar, textvariable=self.drift_count_var, width=9).grid(row=0, column=1, padx=(4, 14))
-        ttk.Label(bar, text="Sampling seed:").grid(row=0, column=2)
-        ttk.Entry(bar, textvariable=self.drift_seed_var, width=12).grid(row=0, column=3, padx=4)
-        ttk.Button(bar, text="Refit", command=self.refit_energy_drift).grid(row=0, column=4, padx=6)
-        ttk.Button(bar, text="Save fit JSON", command=self.save_energy_drift).grid(row=1, column=0, columnspan=2, sticky="w")
-        ttk.Button(bar, text="Save plot PNG", command=self.save_image).grid(row=1, column=2, columnspan=2, sticky="w")
-        ttk.Label(bar, text=self.timestep_summary).grid(row=2, column=0, columnspan=5, sticky="w", pady=(4, 0))
+        ttk.Label(bar, text=f"All {self.drift_result['fit_records']:,} records · weighted by physical time").grid(
+            row=0, column=0, columnspan=2, sticky="w")
+        ttk.Button(bar, text="Save fit JSON", command=self.save_energy_drift).grid(row=1, column=0, sticky="w")
+        ttk.Button(bar, text="Save plot PNG", command=self.save_image).grid(row=1, column=1, sticky="w", padx=8)
+        ttk.Label(bar, text=self.timestep_summary).grid(row=2, column=0, columnspan=2, sticky="w", pady=(4, 0))
         note = ttk.Label(self.drift_tab, style="Note.TLabel", justify="left",
-                        text="Uniform random physical times; energy is interpolated from saved records. "
+                        text="All saved records are fitted. Each weight is half the physical-time interval on each side; endpoints use one side.\n"
                              "The fit uses E(t) - E(0), with a free intercept; both axes are linear.\n"
                              "Positive slope: energy increases; negative: decreases. Near-zero slope alone does not imply conservation.",
                         wraplength=900)
@@ -2789,9 +3504,7 @@ class NBodyViewer:
                                                linewidth=1, label="Recorded energy offset")
         self.set_time_series(recorded_line, self.energy_plot_times, self.energy_plot_offsets,
                              preserve_zero=True)
-        self.drift_points, = self.drift_axes.plot([], [], linestyle="none", marker=".",
-                                                 markersize=3, alpha=.55, color="#db8a22", label="Random samples")
-        self.drift_line, = self.drift_axes.plot([], [], color="#bb3040", linewidth=1.7, label="Linear fit")
+        self.drift_line, = self.drift_axes.plot([], [], color="#bb3040", linewidth=1.7, label="Time-weighted linear fit")
         self.drift_axes.axhline(0, color="#687485", linestyle=":", linewidth=.7, label="Initial energy offset")
         self.drift_axes.set_xlabel("Time (code units)")
         self.drift_axes.set_ylabel("E(t) - E(0) (code energy)")
@@ -2804,37 +3517,24 @@ class NBodyViewer:
 
     def update_drift_plot(self):
         result = self.drift_result
-        times = np.asarray(result["sample_times"])
-        offsets = np.asarray(result["sample_energy_offsets"])
+        times = self.times
+        offsets = self.energies - self.energies[0]
         ends = np.array([result["time_start"], result["time_end"]])
         fit_times = np.linspace(ends[0], ends[1], 257)
         fitted = result["intercept_offset_at_start"] + result["slope"] * (fit_times - ends[0])
-        self.drift_points.set_data(times, offsets)
         self.drift_line.set_data(fit_times, fitted)
         self.drift_axes.set_yscale("linear")
         def number(value):
             return "NA" if value is None else f"{value:.6e}"
         self.drift_summary_text.set_text(
-            f"Random-time energy drift fit | samples = {result['sample_count']:,} | seed = {result['seed']}\n"
+            f"Time-weighted energy drift fit | all {result['fit_records']:,} records\n"
             f"Slope k = {number(result['slope'])} energy/time | normalized k = {number(result['normalized_slope'])} /time\n"
             f"Fitted change k*T = {number(result['fitted_energy_change'])} | normalized change = {number(result['normalized_fitted_energy_change'])}\n"
-            f"Offset intercept = {number(result['intercept_offset_at_start'])} | residual RMSE = {number(result['residual_rmse'])} | R-squared = {number(result['r_squared'])}")
+            f"Offset intercept = {number(result['intercept_offset_at_start'])} | weighted residual RMSE = {number(result['residual_rmse'])} | weighted R-squared = {number(result['r_squared'])}")
         self.drift_axes.relim(); self.drift_axes.autoscale_view()
         predicted = result["intercept_offset_at_start"] + result["slope"] * (times - ends[0])
-        self.register_hover(self.drift_axes, times, {"Sample ΔE": offsets, "Fit ΔE": predicted}, "Energy drift samples")
+        self.register_hover(self.drift_axes, times, {"Recorded ΔE": offsets, "Fit ΔE": predicted}, "All-record energy drift fit")
         self.drift_canvas.draw_idle()
-
-    def refit_energy_drift(self):
-        try:
-            result = fit_energy_drift(self.times, self.energies, self.metadata["energy_scale"],
-                                      int(self.drift_count_var.get()), int(self.drift_seed_var.get()))
-        except (ValueError, OverflowError) as exc:
-            messagebox.showerror("Invalid drift settings", str(exc), parent=self.root)
-            return
-        self.drift_result = result
-        self.metadata["energy_drift"] = result
-        self.update_drift_plot()
-        self.status_var.set("Drift fit updated. Save fit JSON to retain these settings; archived default summaries are unchanged.")
 
     def save_energy_drift(self):
         path = self.choose_save_path(".json", "Energy drift analysis", "_energy_drift")
@@ -2842,9 +3542,12 @@ class NBodyViewer:
             return
         try:
             payload = dict(run_id=self.metadata.get("run_id"), case_name=self.metadata.get("case_name"),
-                           method=self.metadata.get("method_name"), analysis=self.drift_result)
+                           method=self.metadata.get("method_name"), analysis=self.drift_result,
+                           fit_data=dict(times=self.times.tolist(),
+                               energy_offsets=(self.energies-self.energies[0]).tolist(),
+                               normalized_time_weights=physical_time_record_weights(self.times).tolist()))
             _archive_write(Path(path), json.dumps(payload, ensure_ascii=False, allow_nan=False, indent=2).encode("utf-8"))
-            self.status_var.set(f"Drift fit and sampled values saved: {path}")
+            self.status_var.set(f"Time-weighted drift fit, all records and weights saved: {path}")
         except Exception as exc:
             messagebox.showerror("Save failed", str(exc), parent=self.root)
 
@@ -2909,6 +3612,10 @@ class NBodyViewer:
     def apply_energy_scale(self, axis, values):
         if self.energy_scale_var.get() == "symlog":
             set_physical_log_scale(axis, values)
+            axis.yaxis.set_major_locator(EnergyLogLocator())
+            axis.yaxis.set_major_formatter(FuncFormatter(
+                lambda value, position: energy_log_tick_label(value, position, axis)))
+            axis.yaxis.set_minor_locator(NullLocator())
         else:
             axis.set_yscale("linear")
             axis.yaxis.set_major_locator(MaxNLocator(nbins=4))
@@ -2938,7 +3645,8 @@ class NBodyViewer:
         self.energy_reference.set_label("ΔE = 0" if offset else "E(0)")
         self.energy_title_text.set_text("Energy offset ΔE" if offset else "Total energy E")
         # Always report signed offsets from E(0), including in absolute-energy view.
-        self.energy_statistics = full_time_statistics(self.energies - self.energies[0], self.times)
+        if not hasattr(self, "energy_statistics"):
+            self.energy_statistics = full_time_statistics(self.energies - self.energies[0], self.times)
         self.energy_statistics_text.set_text(statistics_label(self.energy_statistics, "ΔE"))
         self.apply_energy_scale(self.energy_axes, values)
         self.energy_axes.set_ylabel(f"{label} (code units; {scale})", fontsize=9)
@@ -2962,6 +3670,12 @@ class NBodyViewer:
             axis.set_ylabel(f"{label} ({scale})")
             self.diagnostic_title_text.set_text("Energy offset ΔE = E(t) - E(0)" if offset else "Total energy E(t)")
             self.diagnostic_error_text.set_text(self.diagnostic_energy_error_label)
+            drift = getattr(self, "drift_result", None) or self.metadata.get("energy_drift") or {}
+            def drift_number(value):
+                return "NA" if value is None else f"{value:+.5e}"
+            self.diagnostic_drift_text.set_text(
+                f"Energy drift k = {drift_number(drift.get('slope'))} (energy/time)    "
+                f"Normalized k = {drift_number(drift.get('normalized_slope'))} (1/time)")
             self.diagnostic_statistics_text.set_text(statistics_label(self.energy_statistics, "ΔE"))
             axis.relim(); axis.autoscale_view(scalex=False)
             if axis in saved_limits:
@@ -2982,6 +3696,7 @@ class NBodyViewer:
             for toolbar in (self.toolbar, self.diagnostic_toolbar, self.derivative_toolbar):
                 toolbar.update()
                 toolbar.push_current()
+            self.active_canvas().draw()
 
     def refresh_acceleration(self):
         vectors = self.accelerations[:, self.star_index, :]
@@ -3075,8 +3790,11 @@ class NBodyViewer:
         else:
             self.orbit_axes.set_title("Trajectories", fontsize=10)
 
-    def draw_frame(self, step, redraw=True):
+    def draw_frame(self, step, redraw=True, playback_time=None):
         self.step = int(np.clip(step, 0, self.last_step))
+        # Keep the continuous playhead separate from the nearest stored state.
+        # Rounding to a record must not accumulate a playback-time error.
+        self.playback_time = float(self.times[self.step] if playback_time is None else playback_time)
         # Cap only the displayed trail, always keeping its current endpoint.
         stride = max(1, int(np.ceil((self.step + 1) / 4000)))
         indices = np.arange(0, self.step + 1, stride)
@@ -3149,10 +3867,12 @@ class NBodyViewer:
 
     def pause(self):
         self.playing = False
+        self.playback_last_clock = None
         self.play_button.configure(text="Play")
 
     def toggle_play(self):
         self.playing = not self.playing
+        self.playback_last_clock = time.perf_counter() if self.playing else None
         self.play_button.configure(text="Pause" if self.playing else "Play")
 
     def single_step(self, direction):
@@ -3167,17 +3887,26 @@ class NBodyViewer:
         if self.closed:
             return
         if self.playing and not self.dragging:
+            now = time.perf_counter()
+            elapsed = max(0., now - self.playback_last_clock) if self.playback_last_clock is not None else 0.
+            self.playback_last_clock = now
             try:
-                stride = max(1, int(self.stride_var.get()))
-            except ValueError:
-                stride = 1
-            if self.step >= self.last_step:
+                speed = float(self.playback_speed_var.get())
+                if not np.isfinite(speed) or speed <= 0:
+                    speed = 1.
+            except (ValueError, OverflowError):
+                speed = 1.
+            duration = float(self.times[-1] - self.times[0])
+            target = self.playback_time + elapsed * speed * duration / 60.
+            if target >= self.times[-1]:
                 if self.loop_var.get():
-                    self.draw_frame(0)
+                    target = self.times[0] + (target - self.times[0]) % duration
                 else:
+                    target = float(self.times[-1])
                     self.pause()
-            else:
-                self.draw_frame(min(self.last_step, self.step + stride))
+            self.draw_frame(self.nearest_index(self.times, target), playback_time=target)
+        else:
+            self.playback_last_clock = None
         self.after_id = self.root.after(40, self.tick)
 
     def on_seek(self, value):
@@ -3304,7 +4033,7 @@ class NBodyViewer:
             stamp = (Path(original).stem if original else
                      datetime.fromisoformat(self.metadata["run_started_at"]).strftime("%Y-%m-%d_%H-%M-%S"))
             result = self.drift_result
-            name = f"{stamp}_energy_drift_n{result['sample_count']}_seed{result['seed']}{suffix}"
+            name = f"{stamp}_energy_drift_all{result['fit_records']}_timeweighted{suffix}"
             return filedialog.asksaveasfilename(parent=self.root, title=label, initialdir=str(output),
                                                 initialfile=name, defaultextension=suffix,
                                                 filetypes=[(label, "*" + suffix)])
@@ -3324,9 +4053,16 @@ class NBodyViewer:
         if self.adaptive and self.metadata.get("adaptive_algorithm") == "acceleration_ratio":
             base += (f"_trigger_{self.metadata.get('acceleration_trigger_ratio', 2):g}"
                      f"_maxpower_{self.metadata.get('acceleration_max_power', 3)}_reference")
-        elif self.adaptive and self.metadata.get("adaptive_algorithm") == "work_step":
+        elif self.adaptive and self.metadata.get("adaptive_algorithm") in WORK_HISTORY_CODES:
             base += (f"_N_{self.metadata['work_step_factor']:g}_K_{self.metadata['work_max_power']}"
                      f"_bound_{self.metadata.get('work_threshold', 1.0):g}")
+            if self.metadata.get("work_preprobe_enabled"):
+                base += "_preprobe"
+            if self.work_symmetric:
+                base += "_work_skill_test"
+            if self.work_algorithm_code in WORK_ALIGNED_CODES and self.metadata.get("adaptive_algorithm") not in WORK_ALIGNED_CODES:
+                # Older aligned files used the original algorithm code; keep exports distinct.
+                base += "_align"
         return filedialog.asksaveasfilename(parent=self.root, title=label,
                                             initialdir=str(output), initialfile=base + suffix,
                                             defaultextension=suffix, filetypes=[(label, "*" + suffix)])
@@ -3393,7 +4129,7 @@ class NBodyViewer:
                 com_pos=np.array([item["com_pos"] for item in self.diagnostics]),
                 com_v=np.array([item["com_v"] for item in self.diagnostics]),
                 metadata=json.dumps(self.metadata, ensure_ascii=False),
-                **projection_export_arrays(self.accelerations, self.velocities, self.times, self.step_sizes),
+                **projection_export_arrays(self.accelerations, self.velocities, self.times, self.step_sizes, self.metadata),
                 **acceleration_derivative_export_arrays(self.accelerations, self.times),
             )
             self.status_var.set(f"Saved every star and time step: {path}")
@@ -3511,6 +4247,8 @@ def prepare_batch_plan(plan):
     allowed = {"initial_mode", "seed", "orbit_index", "dt", "total_time", "method",
                "adaptive_enabled", "adaptive_algorithm", "adaptive_eta",
                "acceleration_trigger_ratio", "acceleration_max_power", "work_step_factor", "work_max_power", "work_threshold",
+               "work_preprobe_enabled", "work_protection_before", "work_protection_after",
+               "binary_eccentricity",
                "sample_every", "compute_backend", "cpu_threads", "particle_count"}
     resolved = []
     for index, override in enumerate(runs, 1):
@@ -3552,7 +4290,7 @@ def save_batch_arrays(result):
                   velocities=result["velocities"], energies=result["energies"],
                   diagnostic_times=result["diagnostic_times"],
                   metadata=json.dumps(metadata, ensure_ascii=False))
-    arrays.update(projection_export_arrays(result["accelerations"], result["velocities"], result["record_times"], result["step_sizes"]))
+    arrays.update(projection_export_arrays(result["accelerations"], result["velocities"], result["record_times"], result["step_sizes"], metadata))
     arrays.update(acceleration_derivative_export_arrays(result["accelerations"], result["record_times"]))
     for key in ("energy", "momentum", "angular_momentum", "com_pos", "com_v"):
         arrays["diagnostic_energy" if key == "energy" else key] = np.asarray([d[key] for d in diagnostics])
@@ -3576,6 +4314,9 @@ def publish_batch_position_columns(manifest, directory):
     jobs = manifest["jobs"]
     for i, job in enumerate(jobs, 1):
         if job["status"] != "saved":
+            continue
+        if is_kepler_config(job.get("config", {})):
+            # The analytic Kepler metric is automatic; keep batch comparisons separate.
             continue
         row = next((r for r in manifest.get("comparisons", []) if r["test"] == i and r["against"] == ref), {})
         count = sum(r["against"] == ref and r["test"] != ref and r["status"] == "saved"
@@ -3808,8 +4549,8 @@ class BatchPlanEditor:
         self.widgets = {}
         # Keep each algorithm's values while one parameter/limit pair is visible.
         for key, default in (("adaptive_eta", "0.03"), ("acceleration_trigger_ratio", "2.0"),
-                             ("acceleration_max_power", "7"), ("work_step_factor", "2.0"),
-                             ("work_max_power", "7")):
+                             ("acceleration_max_power", "7"), ("work_step_factor", str(WORK_DEFAULT_FACTOR)),
+                             ("work_max_power", str(WORK_DEFAULT_MAX_POWER))):
             self.vars[key] = tk.StringVar(value=default)
         top = ttk.Frame(self.window, padding=12)
         top.grid(row=0, column=0, sticky="ew")
@@ -3839,7 +4580,8 @@ class BatchPlanEditor:
             ("compute_backend", "Compute device", list(COMPUTE_BACKENDS.values())),
             ("cpu_threads", "CPU threads (0 = auto)", None),
             ("particle_count", "Random particle count", None),
-            ("work_threshold", "Work trigger threshold (L²/T²)", None),
+            ("work_threshold", "Trigger Threshold (dimensionless)", None),
+            ("binary_eccentricity", "Binary eccentricity e", None),
         ]
         for i, (key, title, choices) in enumerate(fields):
             row, col = i // 2, 2 * (i % 2)
@@ -3856,7 +4598,8 @@ class BatchPlanEditor:
             if scaled_time:
                 host.grid(row=row, column=col+1, sticky="ew", padx=(0, 12), pady=4)
                 host.columnconfigure(0, weight=1)
-            widget = (ttk.Combobox(host, textvariable=variable, values=choices, state="readonly", width=28)
+            widget = (ttk.Combobox(host, textvariable=variable, values=choices, state="readonly",
+                                   width=40 if key == "adaptive_algorithm" else 28)
                       if choices else ttk.Entry(host, textvariable=variable, width=28))
             if scaled_time:
                 widget.grid(row=0, column=0, sticky="ew")
@@ -3878,6 +4621,11 @@ class BatchPlanEditor:
             if choices:
                 widget.bind("<<ComboboxSelected>>", self.sync_fields)
         self.widgets["orbit_index"].bind("<<ComboboxSelected>>", self.orbit_defaults)
+        self.vars["work_preprobe_enabled"] = tk.BooleanVar(value=False)
+        self.widgets["work_preprobe_enabled"] = ttk.Checkbutton(
+            form, text=WORK_PREPROBE_LABEL, variable=self.vars["work_preprobe_enabled"])
+        self.widgets["work_preprobe_enabled"].grid(row=(len(fields)+1)//2, column=0,
+                                                  columnspan=2, sticky="w")
         ttk.Button(form, text="New random seed", command=lambda: self.vars["seed"].set(str(secrets.randbits(32)))).grid(
             row=(len(fields)+1)//2, column=3, sticky="w")
         self.auto_reference_var = tk.BooleanVar(value=True)
@@ -3913,7 +4661,7 @@ class BatchPlanEditor:
             ("method", "Method", 85, "w"),
             ("dt", "DT", 185, "e"),
             ("duration", "Duration T", 100, "e"),
-            ("adaptive", "Adaptive method", 140, "w"),
+            ("adaptive", "Adaptive method", 340, "w"),
             ("device", "Device", 200, "center"),
         )
         self.summary = ttk.Treeview(
@@ -3945,7 +4693,7 @@ class BatchPlanEditor:
     def format_adaptive_parameter(self, event=None):
         if self.vars["adaptive_algorithm"].get() == ADAPTIVE_ALGORITHMS["acceleration_ratio"]:
             format_acceleration_ratio(self.vars["acceleration_trigger_ratio"])
-        elif self.vars["adaptive_algorithm"].get() == ADAPTIVE_ALGORITHMS["work_step"]:
+        elif self.vars["adaptive_algorithm"].get() in [ADAPTIVE_ALGORITHMS[key] for key in WORK_ALGORITHM_CODES]:
             format_acceleration_ratio(self.vars["work_step_factor"])
 
     def sync_fields(self, event=None):
@@ -3953,7 +4701,7 @@ class BatchPlanEditor:
         enabled = self.vars["adaptive_enabled"].get() == "On"
         timescale = self.vars["adaptive_algorithm"].get() == "Time-scale method"
         ratio = self.vars["adaptive_algorithm"].get() == ADAPTIVE_ALGORITHMS["acceleration_ratio"]
-        work = self.vars["adaptive_algorithm"].get() == ADAPTIVE_ALGORITHMS["work_step"]
+        work = self.vars["adaptive_algorithm"].get() in [ADAPTIVE_ALGORITHMS[key] for key in WORK_ALGORITHM_CODES]
         parameter_key, parameter_label = (
             ("adaptive_eta", "Safety factor") if timescale else
             ("work_step_factor", "Shrink / recovery factor N") if work else
@@ -3964,9 +4712,11 @@ class BatchPlanEditor:
         self.widgets["adaptive_limit"].configure(textvariable=self.vars[
             "work_max_power" if work else "acceleration_max_power"])
         for key, active in (("seed", not orbit), ("particle_count", not orbit), ("orbit_index", orbit),
+                            ("binary_eccentricity", orbit and STABLE_ORBITS[self.widgets["orbit_index"].current()].get("kepler_binary", False)),
                             ("adaptive_algorithm", enabled), ("adaptive_parameter", enabled),
                             ("adaptive_limit", enabled and (ratio or work)),
                             ("work_threshold", enabled and work),
+                            ("work_preprobe_enabled", enabled and work),
                             ("cpu_threads", BACKEND_CODES.get(self.vars["compute_backend"].get()) == "cpu_parallel")):
             widget = self.widgets[key]
             widget.configure(state=("readonly" if isinstance(widget, ttk.Combobox) else "normal") if active else "disabled")
@@ -3993,10 +4743,13 @@ class BatchPlanEditor:
         job = self.jobs[self.current]
         config = job["config"]
         for key, variable in self.vars.items():
-            variable.set(str(config.get(key, "")))
-        self.vars["work_step_factor"].set(str(config.get("work_step_factor", 2.0)))
-        self.vars["work_max_power"].set(str(config.get("work_max_power", 7)))
-        self.vars["work_threshold"].set(str(config.get("work_threshold", 1.0)))
+            if key != "work_preprobe_enabled":
+                variable.set(str(config.get(key, "")))
+        self.vars["work_preprobe_enabled"].set(bool(config.get("work_preprobe_enabled", False)))
+        self.vars["work_step_factor"].set(str(config.get("work_step_factor", WORK_DEFAULT_FACTOR)))
+        self.vars["work_max_power"].set(str(config.get("work_max_power", WORK_DEFAULT_MAX_POWER)))
+        self.vars["work_threshold"].set(str(config.get("work_threshold", WORK_DEFAULT_THRESHOLD)))
+        self.vars["binary_eccentricity"].set(str(config.get("binary_eccentricity", DEFAULT_ECCENTRICITY)))
         self.vars["dt"].set(scientific_dt_text(config["dt"]))
         format_acceleration_ratio(self.vars["acceleration_trigger_ratio"])
         self.vars["label"].set(job["label"])
@@ -4058,6 +4811,8 @@ class BatchPlanEditor:
             source = STABLE_ORBITS[c["orbit_index"]]["name"] if c["initial_mode"] == "orbit" else f"seed {c['seed']}"
             method = "Leapfrog" if c["method"] == "1" else "RK4"
             adaptive = c["adaptive_algorithm"] if c["adaptive_enabled"] else "Off"
+            if c["adaptive_enabled"] and c["adaptive_algorithm"] in WORK_ALGORITHM_CODES:
+                adaptive = work_history_method(c["adaptive_algorithm"], c.get("work_preprobe_enabled", False))
             self.summary.insert(
                 "", "end",
                 values=("★" if rank == 1 else str(rank),
@@ -4214,13 +4969,15 @@ class NBodyApp:
         self.adaptive_algorithm_var = tk.StringVar(value=ADAPTIVE_ALGORITHMS["acceleration_ratio"])
         self.eta_var = tk.StringVar(value="0.03")
         self.trigger_ratio_var = tk.StringVar(value="2.0")
-        self.work_factor_var = tk.StringVar(value="2.0")
-        self.work_max_power_var = tk.StringVar(value="7")
-        self.work_threshold_var = tk.StringVar(value="1")
+        self.work_factor_var = tk.StringVar(value=str(WORK_DEFAULT_FACTOR))
+        self.work_max_power_var = tk.StringVar(value=str(WORK_DEFAULT_MAX_POWER))
+        self.work_threshold_var = tk.StringVar(value=str(WORK_DEFAULT_THRESHOLD))
+        self.work_preprobe_var = tk.BooleanVar(value=False)
         self.max_power_var = tk.StringVar(value="7")
         self.backend_var = tk.StringVar(value=COMPUTE_BACKENDS["cpu_parallel"])
         self.cpu_threads_var = tk.StringVar(value="0")
         self.particle_count_var = tk.StringVar(value="5")
+        self.binary_eccentricity_var = tk.StringVar(value=str(DEFAULT_ECCENTRICITY))
         self.record_run_var = tk.BooleanVar(value=True)
         self.form_widgets = []
 
@@ -4277,8 +5034,15 @@ class NBodyApp:
             self.settings, text="Enable adaptive time step", variable=self.adaptive_var, command=self.sync_fields)
         self.adaptive_check.grid(row=2, column=0, columnspan=2, sticky="w", pady=3)
         self.form_widgets.append(self.adaptive_check)
-        label("Work trigger threshold", 2, 2)
-        self.work_threshold_entry = entry(self.work_threshold_var, 2, 3)
+        label("Trigger Threshold", 2, 2)
+        work_threshold_host = ttk.Frame(self.settings)
+        work_threshold_host.grid(row=2, column=3, sticky="ew", padx=(0, 12), pady=3)
+        self.work_threshold_entry = ttk.Entry(work_threshold_host, textvariable=self.work_threshold_var, width=9)
+        self.work_threshold_entry.pack(side="left", fill="x", expand=True)
+        self.work_preprobe_check = ttk.Checkbutton(
+            work_threshold_host, text=WORK_PREPROBE_LABEL, variable=self.work_preprobe_var, command=self.sync_fields)
+        self.work_preprobe_check.pack(side="left", padx=(5, 0))
+        self.form_widgets.extend((self.work_threshold_entry, self.work_preprobe_check))
         self.run_button = ttk.Button(self.settings, text="Start / Rerun", command=self.start_run)
         self.run_button.grid(row=2, column=4, columnspan=2, sticky="ew", padx=(0, 12), pady=3)
         self.cancel_button = ttk.Button(self.settings, text="Cancel run", command=self.cancel_run, state="disabled")
@@ -4299,7 +5063,7 @@ class NBodyApp:
         label("Adaptive algorithm", 4, 0)
         self.adaptive_algorithm_combo = ttk.Combobox(
             self.settings, textvariable=self.adaptive_algorithm_var, state="disabled",
-            values=list(ADAPTIVE_ALGORITHMS.values()), width=23)
+            values=list(ADAPTIVE_ALGORITHMS.values()), width=40)
         self.adaptive_algorithm_combo.grid(row=4, column=1, sticky="ew", padx=(0, 12), pady=3)
         self.adaptive_algorithm_combo.bind("<<ComboboxSelected>>", lambda event: self.sync_fields())
         self.form_widgets.append(self.adaptive_algorithm_combo)
@@ -4326,6 +5090,10 @@ class NBodyApp:
         self.form_widgets.append(self.record_check)
         ttk.Label(self.settings, text="Off: view results without automatic history or PNG. Test mode keeps its batch archives.",
                   style="Note.TLabel").grid(row=7, column=3, columnspan=5, sticky="w")
+        label("Binary eccentricity e", 8, 0)
+        self.binary_eccentricity_entry = entry(self.binary_eccentricity_var, 8, 1)
+        ttk.Label(self.settings, text="Kepler binary only: 0 <= e < 1; a=1, masses=1+1; automatic analytic position RMSE.",
+                  style="Note.TLabel").grid(row=8, column=2, columnspan=6, sticky="w")
         self.mode_combo.bind("<<ComboboxSelected>>", self.on_source_change)
         self.orbit_combo.bind("<<ComboboxSelected>>", self.use_orbit_defaults)
         self.use_orbit_defaults()
@@ -4513,7 +5281,7 @@ class NBodyApp:
     def format_adaptive_parameter(self, event=None):
         if self.adaptive_algorithm_var.get() == ADAPTIVE_ALGORITHMS["acceleration_ratio"]:
             format_acceleration_ratio(self.trigger_ratio_var)
-        elif self.adaptive_algorithm_var.get() == ADAPTIVE_ALGORITHMS["work_step"]:
+        elif self.adaptive_algorithm_var.get() in [ADAPTIVE_ALGORITHMS[key] for key in WORK_ALGORITHM_CODES]:
             format_acceleration_ratio(self.work_factor_var)
 
     def sync_fields(self):
@@ -4524,14 +5292,17 @@ class NBodyApp:
         self.seed_entry.configure(state="normal" if mode == "Specified seed" else "disabled")
         self.particle_count_entry.configure(state="disabled" if mode == "Known orbit" else "normal")
         self.orbit_combo.configure(state="readonly" if mode == "Known orbit" else "disabled")
+        self.binary_eccentricity_entry.configure(state="normal" if mode == "Known orbit"
+            and STABLE_ORBITS[self.orbit_combo.current()].get("kepler_binary", False) else "disabled")
         use_timescale = self.adaptive_algorithm_var.get() == "Time-scale method"
         use_ratio = self.adaptive_algorithm_var.get() == ADAPTIVE_ALGORITHMS["acceleration_ratio"]
-        use_work = self.adaptive_algorithm_var.get() == ADAPTIVE_ALGORITHMS["work_step"]
+        use_work = self.adaptive_algorithm_var.get() in [ADAPTIVE_ALGORITHMS[key] for key in WORK_ALGORITHM_CODES]
         self.adaptive_limit_note_var.set("Minimum dt = initial dt / N^K" if use_work
                                          else "Minimum suggested dt = initial dt / N^K" if use_ratio
                                          else "Time-scale safety factor: eta")
         enabled = self.adaptive_var.get()
         self.work_threshold_entry.configure(state="normal" if enabled and use_work else "disabled")
+        self.work_preprobe_check.configure(state="normal" if enabled and use_work else "disabled")
         self.adaptive_algorithm_combo.configure(state="readonly" if enabled else "disabled")
         parameter_label, parameter_var = (
             ("Safety factor", self.eta_var) if use_timescale else
@@ -4543,11 +5314,16 @@ class NBodyApp:
         self.max_power_entry.configure(textvariable=self.work_max_power_var if use_work else self.max_power_var,
                                        state="normal" if enabled and (use_ratio or use_work) else "disabled")
         self.algorithm_note_var.set(
-            "Work-step: compare trial-end max_i |a_i dot v_i| dt with Work trigger threshold (code L²/T²). Reject above it, restore and divide dt by N, at most K cumulative bands. At K, continue and report over-limit steps in red. Recover one band when the accepted-state product times enlarged dt is below the same threshold; never exceed initial dt."
+            work_algorithm_note(ADAPTIVE_CODES[self.adaptive_algorithm_var.get()])
             if use_work else
             "Selects dt from pairwise gravitational and encounter time scales; smaller eta gives more conservative steps."
             if use_timescale else
             "Each star is compared with its retained reference, so accumulated growth also triggers adjustment. The largest level controls dt, capped at K. Zero values do not automatically reduce dt.")
+        if use_work and self.work_preprobe_var.get():
+            self.algorithm_note_var.set(self.algorithm_note_var.get() +
+                " Pre-probe ON: if recovery occurs while max |a| rises, probe through its peak and return to entry |a|, "
+                "discard the probe, then replay at the original smaller dt or below with recovery disabled. "
+                "Probe evaluations are included in elapsed time and counted separately from accepted steps.")
         seed_hint = ("Generates a new seed for each run; use Specified seed to reproduce it."
                      if mode == "Random seed" else
                      "Known orbits use preset positions and velocities, independent of random seeds."
@@ -4586,16 +5362,18 @@ class NBodyApp:
             seed = STABLE_ORBITS[self.orbit_combo.current()]["seed"]
         return validate_config(dict(
             initial_mode=mode, seed=seed, orbit_index=self.orbit_combo.current(),
+            binary_eccentricity=self.binary_eccentricity_var.get(),
             dt=self.dt_var.get(), total_time=self.duration_var.get(),
             method="1" if self.method_combo.current() == 0 else "2",
             adaptive_enabled=self.adaptive_var.get(),
             adaptive_algorithm=ADAPTIVE_CODES[self.adaptive_algorithm_var.get()],
             work_step_factor=(self.work_factor_var.get() if self.adaptive_var.get()
-                              and self.adaptive_algorithm_var.get() == ADAPTIVE_ALGORITHMS["work_step"] else 2.0),
+                              and self.adaptive_algorithm_var.get() in [ADAPTIVE_ALGORITHMS[key] for key in WORK_ALGORITHM_CODES] else WORK_DEFAULT_FACTOR),
             work_max_power=(self.work_max_power_var.get() if self.adaptive_var.get()
-                            and self.adaptive_algorithm_var.get() == ADAPTIVE_ALGORITHMS["work_step"] else 7),
+                            and self.adaptive_algorithm_var.get() in [ADAPTIVE_ALGORITHMS[key] for key in WORK_ALGORITHM_CODES] else WORK_DEFAULT_MAX_POWER),
             work_threshold=(self.work_threshold_var.get() if self.adaptive_var.get()
-                            and self.adaptive_algorithm_var.get() == ADAPTIVE_ALGORITHMS["work_step"] else 1.0),
+                            and self.adaptive_algorithm_var.get() in [ADAPTIVE_ALGORITHMS[key] for key in WORK_ALGORITHM_CODES] else WORK_DEFAULT_THRESHOLD),
+            work_preprobe_enabled=self.work_preprobe_var.get(),
             adaptive_eta=(self.eta_var.get() if self.adaptive_var.get()
                           and self.adaptive_algorithm_combo.current() == 0 else .03),
             acceleration_trigger_ratio=(self.trigger_ratio_var.get() if self.adaptive_var.get()
@@ -4743,11 +5521,18 @@ class NBodyApp:
                     if not record_enabled:
                         self.progress_text.set("Simulation complete. Recording disabled; no history or image saved.")
                     self.batch_finished_run(saved, "Archive failed; use Retry saving run history before closing." if not saved else "")
-                    if data["metadata"].get("adaptive_algorithm") == "work_step":
+                    if data["metadata"].get("adaptive_algorithm") in WORK_ALGORITHM_CODES:
                         count = data["metadata"].get("work_exceeded_steps", 0)
                         intervals = len(data["metadata"].get("work_exceeded_intervals", []))
                         self.progress_text.set(self.progress_text.get() +
-                            f" | K-cap over-limit: {count} steps / {intervals} intervals; see Adaptive limit report.")
+                            f" | K-cap over-limit: {count} steps / {intervals} intervals; see red shading and legend below the graphs.")
+                        if data["metadata"].get("work_preprobe_enabled"):
+                            self.progress_text.set(self.progress_text.get() +
+                                f" | Pre-probe: {data['metadata']['work_probe_window_count']} replay windows, "
+                                f"{data['metadata']['work_probe_trial_evaluations']:,} extra probe trials.")
+                    if data["metadata"].get("position_error", {}).get("reference_kind") == "analytic_kepler":
+                        error = data["metadata"]["position_error"]
+                        self.progress_text.set(self.progress_text.get() + f" | Kepler position RMSE = {error['rmse']:.6e}")
                 elif kind == "cancelled":
                     self.set_running(False)
                     self.batch_finished_run(False, "Cancelled.")
