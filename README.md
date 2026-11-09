@@ -2,7 +2,23 @@
 
 **A Python laboratory for Newtonian N-body dynamics, numerical-error analysis, adaptive time stepping, and CPU/CUDA comparisons.**
 
-This is the current iteration of **N-Body-Simulation**. The main application is [`interactive_nbody_lab.py`](interactive_nbody_lab.py). The published entry point matches the current local numerical algorithms; its manual image-export default uses the portable local output folder. It brings the original model, conservation diagnostics, acceleration tracking, adaptive steps, optional GPU computation, and repeatable batch experiments into one desktop interface.
+## Download and run the Lab
+
+**[Download the N-body Lab source ZIP](https://github.com/Charlie-Zhao-666/N-Body-Simulation/raw/refs/heads/main/downloads/NBody-Lab-source.zip)** (2026-11-08). The ZIP includes the desktop application, built-in orbits, helper modules, dependency lists, and a [Chinese setup and file guide](downloads/RUN_LAB.md). Extract the entire ZIP into a writable folder. You can start a new simulation without downloading historical plots or trajectories.
+
+For a first run on Windows, install desktop Python with Tk support, open PowerShell in the extracted folder, and run:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-base.txt
+.\.venv\Scripts\python.exe "N body simulation Lab.py"
+```
+
+Select **CPU (dictionary / original)** and a preset orbit, then run Leapfrog or RK4. To use the default multi-threaded CPU backend, install `requirements-array-cpu.txt` in the same environment. The guide lists the additional requirements for DOP853, Taylor and GPU modes.
+
+## Repository source
+
+The repository-root source is the 2026-11-02 snapshot of **N-Body-Simulation**. The main application is [`interactive_nbody_lab.py`](interactive_nbody_lab.py). Its manual image-export default uses the portable local output folder. For the newer packaged application, use the ZIP above. It brings the original model, conservation diagnostics, acceleration tracking, adaptive steps, optional GPU computation, and repeatable batch experiments into one desktop interface.
 
 I started this personal project because I find N-body dynamics fascinating and enjoy building simulations to explore how these systems behave. It is still under active development. Implemented features and tested cases are listed separately from future work; a numerically computed reference trajectory is not an exact analytic answer.
 
