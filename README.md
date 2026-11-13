@@ -2,6 +2,12 @@
 
 **A Python laboratory for Newtonian N-body dynamics, numerical-error analysis, adaptive time stepping, and CPU/CUDA comparisons.**
 
+## Try the web version
+
+**[Open N-body Lab in your browser](https://nbody-lab-charlie.zsh13718187275.chatgpt.site)** — explore the simulation online without installing Python, setting up an environment, or installing libraries. The required Python runtime and libraries load automatically in your browser on first use, so the initial launch may take some time. Computation runs locally in your browser.
+
+**[直接体验网页版](https://nbody-lab-charlie.zsh13718187275.chatgpt.site)**：无需自行安装 Python、配置环境或安装依赖库。首次打开时，网页会自动加载所需运行时和资源，请等待初始化完成后开始模拟。
+
 ## Download and run the Lab
 
 **[Download the N-body Lab source ZIP](https://github.com/Charlie-Zhao-666/N-Body-Simulation/raw/refs/heads/main/downloads/NBody-Lab-source.zip)** (2026-11-08). The ZIP includes the desktop application, built-in orbits, helper modules, dependency lists, and a [Chinese setup and file guide](downloads/RUN_LAB.md). Extract the entire ZIP into a writable folder. You can start a new simulation without downloading historical plots or trajectories.
