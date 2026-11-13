@@ -1,3 +1,15 @@
+<p align="center">
+  <a href="https://nbody-lab-charlie.zsh13718187275.chatgpt.site">
+    <img src="docs/assets/web-lab-launch.gif" alt="点击在线体验 N-BODY LAB — 无需安装 Python 或配置环境 / Launch the interactive web lab" width="100%">
+  </a>
+</p>
+
+<h1 align="center"><a href="https://nbody-lab-charlie.zsh13718187275.chatgpt.site">🚀 CLICK TO LAUNCH · 点击在线体验 🚀</a></h1>
+
+<p align="center"><strong>Run the simulation in your browser · 无需自行安装 Python 或依赖库</strong><br>首次打开会自动加载运行资源，请等待初始化完成。</p>
+
+---
+
 # Interactive N-Body Lab
 
 **A Python laboratory for Newtonian N-body dynamics, numerical-error analysis, adaptive time stepping, and CPU/CUDA comparisons.**
