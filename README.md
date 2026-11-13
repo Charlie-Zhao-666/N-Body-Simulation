@@ -1,12 +1,12 @@
 <p align="center">
   <a href="https://nbody-lab-charlie.zsh13718187275.chatgpt.site">
-    <img src="docs/assets/web-lab-launch.gif" alt="点击在线体验 N-BODY LAB — 无需安装 Python 或配置环境 / Launch the interactive web lab" width="100%">
+    <img src="docs/assets/web-lab-launch.gif?v=figure-eight-en" alt="Launch N-Body Lab in your browser — no Python installation or environment setup" width="100%">
   </a>
 </p>
 
-<h1 align="center"><a href="https://nbody-lab-charlie.zsh13718187275.chatgpt.site">🚀 CLICK TO LAUNCH · 点击在线体验 🚀</a></h1>
+<h1 align="center"><a href="https://nbody-lab-charlie.zsh13718187275.chatgpt.site">🚀 CLICK TO LAUNCH N-BODY LAB 🚀</a></h1>
 
-<p align="center"><strong>Run the simulation in your browser · 无需自行安装 Python 或依赖库</strong><br>首次打开会自动加载运行资源，请等待初始化完成。</p>
+<p align="center"><strong>Run the simulation in your browser · No installation required</strong><br>The required runtime loads automatically on first use. Please allow initialization to finish.</p>
 
 ---
 
@@ -17,8 +17,6 @@
 ## Try the web version
 
 **[Open N-body Lab in your browser](https://nbody-lab-charlie.zsh13718187275.chatgpt.site)** — explore the simulation online without installing Python, setting up an environment, or installing libraries. The required Python runtime and libraries load automatically in your browser on first use, so the initial launch may take some time. Computation runs locally in your browser.
-
-**[直接体验网页版](https://nbody-lab-charlie.zsh13718187275.chatgpt.site)**：无需自行安装 Python、配置环境或安装依赖库。首次打开时，网页会自动加载所需运行时和资源，请等待初始化完成后开始模拟。
 
 ## Download and run the Lab
 
@@ -103,7 +101,7 @@ Current evidence, with pre-probe enabled:
 - **Cost:** concentrating small steps near encounters is potentially efficient compared with using a very small fixed step everywhere. The current same-initial-dt tests are usually slower than the coarse fixed baseline and do not establish a general equal-accuracy speedup.
 - **Variant ranking:** Predicted improves some RK4 cases but worsens others; Average and Align also have counterexamples. The Goggles ten-period test shows that improved energy conservation need not recover the original periodic shape.
 
-Read the [algorithm, exact rejection/recovery and pre-probe flow](docs/adaptive-stepping.md), [中文研究说明](docs/work-scale-zh.md), and [settings, results, caveats and source snapshots](docs/reports/2026-11-02-work-scale/README.md). Load the [eight-run KDK/RK4 four-variant plan](plans/work-scale-four-methods.json) for a short demonstration; it is not the full comparison suite. [Publication checks](docs/reports/2026-11-02-work-scale/publication-checks.json).
+Read the [algorithm, exact rejection/recovery and pre-probe flow](docs/adaptive-stepping.md), [research notes (Chinese)](docs/work-scale-zh.md), and [settings, results, caveats and source snapshots](docs/reports/2026-11-02-work-scale/README.md). Load the [eight-run KDK/RK4 four-variant plan](plans/work-scale-four-methods.json) for a short demonstration; it is not the full comparison suite. [Publication checks](docs/reports/2026-11-02-work-scale/publication-checks.json).
 
 The current code also includes the configurable eccentric Kepler binary with an analytic position reference, encounter/indicator diagnostics and portable exports. Retired Work scale Test/Align/Wide variants and total-energy-ratio stepping cannot start new runs; old records remain readable. The October 20 dimensional indicator is historical and differs from today's normalized formula.
 
