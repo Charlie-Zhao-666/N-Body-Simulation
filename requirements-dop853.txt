@@ -1,0 +1,2 @@
+# Optional DOP853 integration; validated with SciPy 1.17.1 / Python 3.14.3.
+scipy>=1.10,<2

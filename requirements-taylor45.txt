@@ -1,0 +1,4 @@
+# Dependencies for Taylor45/100/150/200 CPU precision choices.
+# For float64 only, requirements-array-cpu.txt is sufficient; mpmath is not imported.
+-r requirements-array-cpu.txt
+mpmath==1.3.0

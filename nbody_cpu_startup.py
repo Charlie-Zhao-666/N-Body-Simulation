@@ -30,12 +30,40 @@ class CPUStartupPreparation:
                     warmup_cpu_backend(parallel=parallel)
                 except Exception as exc:
                     self.errors[backend] = f"{type(exc).__name__}: {exc}"
+                if backend not in self.errors:
+                    try:
+                        from nbody_dop853_cpu import warmup_dop853_backend
+                        self.messages.put(("cpu_warmup", f"Startup CPU preparation: compiling DOP853 {label}..."))
+                        warmup_dop853_backend(parallel=parallel)
+                    except Exception as exc:
+                        # Optional SciPy/DOP853 failure must not block KDK or RK4.
+                        self.errors['dop853_'+backend] = f"{type(exc).__name__}: {exc}"
+            if self.stop.is_set():
+                return
+            try:
+                from nbody_taylor45_cpu import warmup_taylor45_backend
+                self.messages.put(("cpu_warmup", "Startup CPU preparation: compiling Taylor45 float64 single..."))
+                warmup_taylor45_backend()
+            except Exception as exc:
+                self.errors['taylor45_cpu_array'] = f"{type(exc).__name__}: {exc}"
+            for order in (100, 150, 200):
+                if self.stop.is_set():
+                    return
+                try:
+                    from nbody_taylor_cpu import warmup_taylor_backend
+                    self.messages.put(("cpu_warmup", f"Startup CPU preparation: compiling Taylor{order} float64 single..."))
+                    warmup_taylor_backend(order)
+                except Exception as exc:
+                    self.errors[f'taylor{order}_cpu_array'] = f"{type(exc).__name__}: {exc}"
             if self.errors:
                 failed = "; ".join(f"{backend}: {error}" for backend, error in self.errors.items())
-                self.messages.put(("cpu_warmup", "CPU preparation failed: " + failed))
+                prefix = ("Optional integrator preparation unavailable; KDK/RK4 ready: "
+                          if all(key.startswith(('dop853_', 'taylor')) for key in self.errors)
+                          else "CPU preparation failed: ")
+                self.messages.put(("cpu_warmup", prefix + failed))
             else:
                 elapsed = time.perf_counter() - self.started_at
-                self.messages.put(("cpu_warmup", f"CPU single/multi: ready (startup {elapsed:.1f}s; KDK + RK4)"))
+                self.messages.put(("cpu_warmup", f"CPU ready (startup {elapsed:.1f}s; KDK + RK4 + DOP853 + Taylor45/100/150/200 float64 single)"))
         finally:
             self.finished_at = time.perf_counter()
             self.done.set()

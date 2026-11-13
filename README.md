@@ -10,7 +10,7 @@
 
 ## Download and run the Lab
 
-**[Download the N-body Lab source ZIP](https://github.com/Charlie-Zhao-666/N-Body-Simulation/raw/refs/heads/main/downloads/NBody-Lab-source.zip)** (2026-11-08). The ZIP includes the desktop application, built-in orbits, helper modules, dependency lists, and a [Chinese setup and file guide](downloads/RUN_LAB.md). Extract the entire ZIP into a writable folder. You can start a new simulation without downloading historical plots or trajectories.
+**[Download the N-body Lab source ZIP](https://github.com/Charlie-Zhao-666/N-Body-Simulation/raw/refs/heads/main/downloads/NBody-Lab-source.zip)** (2026-11-13). The ZIP includes the desktop application, built-in orbits, helper modules, dependency lists, and a [Chinese setup and file guide](downloads/RUN_LAB.md). Extract the entire ZIP into a writable folder. You can start a new simulation without downloading historical plots or trajectories.
 
 For a first run on Windows, install desktop Python with Tk support, open PowerShell in the extracted folder, and run:
 
@@ -24,7 +24,7 @@ Select **CPU (dictionary / original)** and a preset orbit, then run Leapfrog or 
 
 ## Repository source
 
-The repository-root source is the 2026-11-02 snapshot of **N-Body-Simulation**. The main application is [`interactive_nbody_lab.py`](interactive_nbody_lab.py). Its manual image-export default uses the portable local output folder. For the newer packaged application, use the ZIP above. It brings the original model, conservation diagnostics, acceleration tracking, adaptive steps, optional GPU computation, and repeatable batch experiments into one desktop interface.
+The repository-root application and downloadable ZIP were synchronized with the local energy-band version on 2026-11-13 (main application last modified 2026-11-11). The main application is [`interactive_nbody_lab.py`](interactive_nbody_lab.py). Its manual image-export default uses the portable local output folder. The packaged application has the same source under the filename `N body simulation Lab.py`. It brings the original model, conservation diagnostics, acceleration tracking, adaptive steps, optional GPU computation, and repeatable batch experiments into one desktop interface.
 
 I started this personal project because I find N-body dynamics fascinating and enjoy building simulations to explore how these systems behave. It is still under active development. Implemented features and tested cases are listed separately from future work; a numerically computed reference trajectory is not an exact analytic answer.
 
@@ -51,6 +51,14 @@ Listed by development stage, starting with the original model and continuing thr
 14. **Expand the orbit catalog:** Add spatial and higher-body examples, most recently four-body rounded triangles and a seven-pointed star, a five-body spatial trefoil, and a six-body nonsymmetric choreography. Sources, finite-precision limitations and stability distinctions are documented; not all periodic orbits are stable.
 
 The early milestones are recorded in commits [4893a91](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/4893a91) (original model and conservation analysis), [c9f606c](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/c9f606c) (seed control), [5daddb6](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/5daddb6) (known orbits) and [ee2b2e4](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/ee2b2e4) (RK4 selection). Later interactive development was published together in [18a13f5](https://github.com/Charlie-Zhao-666/N-Body-Simulation/commit/18a13f5); its stages above follow the development record, not separate per-feature Git timestamps.
+
+## Step energy error band update (2026-11-13)
+
+The current application includes **Step energy error band**, DOP853, Taylor45/100/150/200, and optional MPFR precision backends. The ZIP and repository-root source include the companion modules required by these features. See the [updated setup and file guide](downloads/RUN_LAB.md) and [Taylor backend guide](TAYLOR_README.md).
+
+To try the energy-band controller, enable adaptive time stepping and select **Step energy error band**. Set the lower and upper limits on the measured absolute single-step total-energy change. **Node drift limit** additionally limits the offset from the initial energy at accepted nodes; zero disables this guard. With a positive limit, the energy plot shows red dashed drift bounds. Rejected trials restart from the same accepted state. The final clipped step and the cumulative-priority rule can waive the lower bound. These checks use float64 energy snapshots and do not provide a bound on trajectory position error.
+
+This publication synchronizes the existing implementation. The earlier experiment reports below retain their original versions and scopes.
 
 ## Work scale research update (2026-11-02)
 
@@ -216,7 +224,7 @@ The **earlier 2026-10-07 dictionary/GPU study** used 1000 steps and finer low-N 
 - Broader reference convergence, analytic two-body benchmarks, long-time and close-encounter tests.
 - Extend energy-drift analysis: sampled trend fitting is implemented; repeat-sampling robustness and relatively flat interval/baseline recovery analysis remain to be evaluated. See the [planned analysis](docs/ROADMAP.md#planned-long-term-energy-drift-and-recovery-analysis).
 - Controlled experiments with gravitational softening or regularization; document any physical model change.
-- Higher-order or alternative integrators beyond classical RK4; assess any method-switching scheme before adoption.
+- Broaden validation and equal-accuracy cost comparisons of the implemented DOP853 and Taylor integrators.
 - A formal project report with reproducible figures and a wider suite of initial conditions.
 - Dark-matter halo models and a physically specified galaxy-merger study; these are not part of the current point-mass validation suite.
 
